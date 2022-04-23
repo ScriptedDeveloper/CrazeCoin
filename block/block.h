@@ -8,7 +8,9 @@ class block {
 		std::string timestamp;
 		std::string previous_hash;
 		std::string data;
+		int nounce;
 		int index;
+		int difficulty; // adding an automated difficulty function later
 
 		// Constructor
 
@@ -17,6 +19,7 @@ class block {
 		//Class functions
 		
 		std::string generate_hash(std::string plain_text);	
+		std::string mine_block();
 		int add_block(block b);
 };
 

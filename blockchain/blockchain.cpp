@@ -4,16 +4,18 @@
 #include <string>
 #include <experimental/filesystem>
 #include <nlohmann/json.hpp>
-#include "../block/block.h"
 #include "blockchain.h"
+#include <libtorrent/torrent_handle.hpp>
+#include "../block/block.h"
+#include "../broadcast/broadcast.h"
 
 bool is_empty(std::ifstream &ifS) {
 	return ifS.peek() == std::ifstream::traits_type::eof();
 }
 
-static block blockchain::generate_genesis_block(std::string data) {
-	static block b("0", data);
-	std::cout << b.add_block(b);
+block blockchain::generate_genesis_block(std::string data) {
+	block b("0", data);
+	b.add_block(b);
 	return b;
 }
 
@@ -25,14 +27,18 @@ bool blockchain::is_blockchain_empty() {
 	return false;
 }
 
-void init_blockchain() {
+void blockchain::init_blockchain() {
 	if(blockchain::is_blockchain_empty()) {
-		//writing l8ter
+		blockchain::generate_genesis_block("GENESIS");
 	}
+
+	
 }
 
 int main() {
 	// Calling start of blockchain
-	init_blockchain();
+	//blockchain::init_blockchain();
+	lt::torrent_handle t = connect_network();
+	print_peers(t);
 	return 0;
 }
