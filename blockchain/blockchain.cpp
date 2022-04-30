@@ -9,6 +9,11 @@
 #include "../block/block.h"
 #include "../broadcast/broadcast.h"
 
+namespace blockchain {
+	std::string path = std::experimental::filesystem::current_path().u8string() + "/" + "blockchain.json";
+
+}
+
 bool is_empty(std::ifstream &ifS) {
 	return ifS.peek() == std::ifstream::traits_type::eof();
 }
@@ -37,8 +42,7 @@ void blockchain::init_blockchain() {
 
 int main() {
 	// Calling start of blockchain
-	//blockchain::init_blockchain();
+	blockchain::init_blockchain();
 	lt::torrent_handle t = connect_network();
-	print_peers(t);
 	return 0;
 }
