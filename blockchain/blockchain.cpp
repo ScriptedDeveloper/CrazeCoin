@@ -9,6 +9,11 @@
 #include "../block/block.h"
 #include "../broadcast/broadcast.h"
 
+namespace blockchain {
+	std::string path = std::experimental::filesystem::current_path().u8string() + "/" + "blockchain.json";
+	std::string torrent_file = std::experimental::filesystem::current_path().u8string() + "/" + "discovery.torrent";
+}
+
 bool is_empty(std::ifstream &ifS) {
 	return ifS.peek() == std::ifstream::traits_type::eof();
 }
@@ -39,6 +44,5 @@ int main() {
 	// Calling start of blockchain
 	//blockchain::init_blockchain();
 	lt::torrent_handle t = connect_network();
-	print_peers(t);
 	return 0;
 }

@@ -1,4 +1,8 @@
+#include <fstream>
+#include <ios>
 #include <iostream>
+#include <libtorrent/alert.hpp>
+#include <libtorrent/fwd.hpp>
 #include <string>
 #include <sstream>
 #include <unistd.h>
@@ -25,22 +29,38 @@ void print_peers(lt::torrent_handle t) {
 	}
 }
 
-int thread_wait_cancel() {
-	sleep(5);
-	return 0;
-}
 
 lt::torrent_handle connect_network() {
 	lt::session s;
 	lt::add_torrent_params p;
 	lt::torrent_handle t;
+	std::string path_temp = blockchain::path;
+	path_temp.erase(path_temp.size() - 15, path_temp.size());
+	std::ofstream o(path_temp + "peers.json", std::ios_base::in);
 	lt::error_code ec;
-	p.save_path = blockchain::path.erase(blockchain::path.size()- 15, blockchain::path.size());
+	nlohmann::json j;
+	std::vector<libtorrent::peer_info> vpeer_info;
+	std::vector<std::string> peer_ips;
+	std::vector<lt::alert*> alerts;
+	p.save_path = path_temp;
 	p.ti = std::make_shared<lt::torrent_info>(blockchain::torrent_file);
 	t = s.add_torrent(p, ec);
-	while(s.is_dht_running()){
-		break;
+	int i = 0;
+	while(i != 5){ 
+		t.get_peer_info(vpeer_info);
+		for(libtorrent::peer_info s : vpeer_info) {
+			if(i == 5) {
+				o << j;
+				o.close();
+				goto done;
+			}
+			j[i] = s.ip.address().to_string(); 
+			o << j; 
+			i++;
+			j = {};
+		}
 	}
+done:
 	return t;
 }
 
