@@ -7,6 +7,7 @@
 #include <nlohmann/json.hpp>
 #include <openssl/sha.h>
 #include "../blockchain/blockchain.h"
+#include "../broadcast/broadcast.h"
 #include "block.h"
 
 block::block(std::string previous_hash, std::string data){
@@ -36,7 +37,6 @@ std::string block::mine_block() {
 	}
 	while(this->hash.rfind(difficulty_str, 0) != 0) {
 		this->nounce++;
-		std::cout << "\nNOUNCE : " << this->nounce << std::endl;
 		this->hash = generate_hash(this->previous_hash + this->data + std::to_string(this->nounce) + this->timestamp);
 	}
 	return this->hash;
@@ -61,6 +61,7 @@ int block::add_block(block b){
  	std::ofstream ofChain(blockchain::path, std::ios_base::app);
 	ofChain << j;
 	ofChain.close(); // might write a function for just opening/closing blockchain file
+	std::cout << send_chain();
 	return 0;
 }
 

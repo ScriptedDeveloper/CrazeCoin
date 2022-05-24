@@ -1,7 +1,9 @@
 #pragma once
 #include <iostream>
-#include <string>
-#include <libtorrent/torrent_handle.hpp>
 
-lt::torrent_handle connect_network();
-void print_peers(lt::torrent_handle t);
+std::string retrieve_peer();
+int connect_network();
+int get_peers();
+int send_chain();
+int recieve_chain();
+void clear_peers();
