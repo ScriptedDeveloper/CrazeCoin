@@ -7,6 +7,7 @@ CFLAGS		+= -lstdc++fs
 CFLAGS		+= -ltorrent-rasterbar
 CFLAGS		+= --std=c++17
 CFLAGS		+= -g
+CFLAGS		+= -lcpr
 
 SRC                           := $(shell find . -type f -name '*.cpp')
 
