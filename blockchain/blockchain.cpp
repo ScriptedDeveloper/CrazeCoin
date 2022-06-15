@@ -48,7 +48,7 @@ void blockchain::init_blockchain() {
 	}
 }
 
-void create_json (std::string name) {
+void create_json(std::string name) {
 	std::ofstream ofs(name);
 	ofs << "{}";
 	ofs.close();
@@ -66,10 +66,11 @@ void check_files () {
 	if(is_empty(ifsPeer)) {
 		std::cout << "\n Peer required files not found, creating..." << std::endl;
 		clear_peers();
-		create_json(blockchain::peer_path);
 		std::cout << "\nDone!" << std::endl;
 	}
-	try {	
+	try {
+		ifsBlock.open(blockchain::path);
+		ifsPeer.open(blockchain::peer_path);
 		nlohmann::json j = j.parse(ifsBlock);
 		nlohmann::json j1 = j1.parse(ifsPeer);
 		ifsBlock.close();

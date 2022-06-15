@@ -38,7 +38,7 @@ std::string retrieve_peer(int n) {
 	return j[n]; // returning n element at the moment
 }
 
-void clear_peers() {
+void clear_peers() { // issue
 	std::ofstream ofs(blockchain::peer_path);
 	ofs << "{}";
 	ofs.close();
@@ -147,9 +147,14 @@ int signup_peer() {
 int get_peers() {
 	std::ofstream ofsPeer(blockchain::peer_path);
 	cpr::Response rpeer = cpr::Get(cpr::Url{blockchain::peer_tracker + "/peers/"});
-	ofsPeer << rpeer.text;
+	ofsPeer << "{}";
+	if(rpeer.status_code == 200) {
+		ofsPeer << rpeer.text;
+		ofsPeer.close();
+		return 0;
+	}
 	ofsPeer.close();
-	return 0;
+	return 1;
 }
 /*
 int get_peers() {
