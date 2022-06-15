@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from main import API
+import main
 app = Flask(__name__)
 
 class WebWrapper():
@@ -10,12 +10,12 @@ class WebWrapper():
         self.app.add_url_rule(url, name, function, methods=methods)
 
     def run(self):
-        self.app.run()
+        self.app.run(port=5002)
 
 
 class server(WebWrapper):
-    def __init__(self, API, wrapper):
-        self.api = API()
+    def __init__(self):
+        self.api = main.API()
         self.wrapper = WebWrapper(app)
 
     def start(self):

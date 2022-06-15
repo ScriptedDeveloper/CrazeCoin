@@ -44,6 +44,8 @@ void clear_peers() {
 	ofs.close();
 }
 
+
+/*
 int check_node(std::string ip) { // optimal solution for now, will implement senders/recievers list later
 	cpr::Response rip = cpr::Get(cpr::Url{"https://api.ipify.org/"});
 	if(ip == rip.text) {
@@ -51,6 +53,7 @@ int check_node(std::string ip) { // optimal solution for now, will implement sen
 	}
 	return 0;
 }
+*/
 
 int recieve_chain() {
 	struct sockaddr_in sockaddr;
@@ -136,10 +139,14 @@ int send_chain() {
 	return 0;
 }
 
+int signup_peer() {
+	cpr::Response rpeer_server = cpr::Post(cpr::Url{blockchain::peer_tracker});
+	return 0;
+}
+
 int get_peers() {
 	std::ofstream ofsPeer(blockchain::peer_path);
-	size_t i = 0, i_ = 0; // i for http size, i_ for actual file
-	cpr::Response rpeer = cpr::Get(cpr::Url{blockchain::peer_tracker});
+	cpr::Response rpeer = cpr::Get(cpr::Url{blockchain::peer_tracker + "/peers/"});
 	ofsPeer << rpeer.text;
 	ofsPeer.close();
 	return 0;
