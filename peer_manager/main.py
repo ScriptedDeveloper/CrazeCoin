@@ -23,7 +23,10 @@ class API:
         open("peers.json", "w").write(self.peers_json)
         self.peers_json = json.load(open("peers.json", "r"))
         return jsonify({"status" : 200, "message" : "SUCCESS"})
-    
+ 
+    def get_peers(self):
+        return str(json.dumps(self.peers_json["peers"]))
+
     def retrieve_peer_amount(self):
         return str(self.peers_json["peer_amount"])
 

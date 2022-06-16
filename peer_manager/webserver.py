@@ -21,6 +21,7 @@ class server(WebWrapper):
     def start(self):
         self.wrapper.add_endpoint("/peers", "peers", self.api.retrieve_peer_amount, methods=["GET"])
         self.wrapper.add_endpoint("/add_peer", "add_peer", self.api.add_peer, methods=["POST"])
+        self.wrapper.add_endpoint("/get_peers", "get_peers", self.api.get_peers, methods=["GET"])
         self.wrapper.run()
 
 

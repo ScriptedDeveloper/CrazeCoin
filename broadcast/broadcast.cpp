@@ -35,12 +35,12 @@ void error_handler(std::string message) {
 std::string retrieve_peer(int n) {
 	std::ifstream ifs(blockchain::peer_path);
 	nlohmann::json j = j.parse(ifs);
-	return j[n]; // returning n element at the moment
+	return j["peers"][n]; // returning n element at the moment
 }
 
 void clear_peers() { // issue
 	std::ofstream ofs(blockchain::peer_path);
-	ofs << "{}";
+	ofs << "{\"peers\" : []}";
 	ofs.close();
 }
 
@@ -145,16 +145,20 @@ int signup_peer() {
 }
 
 int get_peers() {
-	std::ofstream ofsPeer(blockchain::peer_path);
-	cpr::Response rpeer = cpr::Get(cpr::Url{blockchain::peer_tracker + "/peers/"});
-	ofsPeer << "{}";
-	if(rpeer.status_code == 200) {
-		ofsPeer << rpeer.text;
-		ofsPeer.close();
-		return 0;
+	std::ifstream ifsPeer(blockchain::peer_path);
+	nlohmann::json jtext, j = j.parse(ifsPeer);
+	cpr::Response rpeer;
+	while(rpeer.status_code != 200) {
+		rpeer = cpr::Get(cpr::Url{blockchain::peer_tracker + "/get_peers"});
 	}
+	std::cout << rpeer.text;
+	jtext = jtext.parse(rpeer.text);
+	j["peers"] = jtext;
+	std::ofstream ofsPeer(blockchain::peer_path);
+	ofsPeer << j;
+	ifsPeer.close();
 	ofsPeer.close();
-	return 1;
+	return 0;
 }
 /*
 int get_peers() {
