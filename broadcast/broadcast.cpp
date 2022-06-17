@@ -140,7 +140,8 @@ int send_chain() {
 }
 
 int signup_peer() {
-	cpr::Response rpeer_server = cpr::Post(cpr::Url{blockchain::peer_tracker});
+	cpr::Response rpeer_server = cpr::Get(cpr::Url{blockchain::peer_tracker + "/add_peer"});
+	std::cout << rpeer_server.text;
 	return 0;
 }
 

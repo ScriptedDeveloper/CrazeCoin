@@ -40,6 +40,7 @@ bool blockchain::is_blockchain_empty() {
 
 void blockchain::init_blockchain() {
 	clear_peers();
+	signup_peer();
 	get_peers(); // Connecting to other peers
 	if(blockchain::is_blockchain_empty()) {
 		recieve_chain();
