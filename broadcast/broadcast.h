@@ -6,4 +6,5 @@ int connect_network();
 int get_peers();
 int send_chain();
 int recieve_chain();
+int signup_peer();
 void clear_peers();
