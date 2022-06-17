@@ -1,3 +1,19 @@
+/*
+CrazeCoin, a semi-decentralised work-in-progress CryptoCurrency
+Copyright (C) 2022  ScriptedDev
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
 #define PORT 9000
 #include <iostream>
 #include <string>
@@ -34,7 +50,12 @@ void error_handler(std::string message) {
 
 std::string retrieve_peer(int n) {
 	std::ifstream ifs(blockchain::peer_path);
-	nlohmann::json j = j.parse(ifs);
+	nlohmann::json j;
+	try {
+	j = j.parse(ifs);
+	} catch(nlohmann::json::parse_error) {
+		get_peers();	
+	}
 	return j["peers"][n]; // returning n element at the moment
 }
 
@@ -152,7 +173,6 @@ int get_peers() {
 	while(rpeer.status_code != 200) {
 		rpeer = cpr::Get(cpr::Url{blockchain::peer_tracker + "/get_peers"});
 	}
-	std::cout << rpeer.text;
 	jtext = jtext.parse(rpeer.text);
 	j["peers"] = jtext;
 	std::ofstream ofsPeer(blockchain::peer_path);
