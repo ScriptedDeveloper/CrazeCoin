@@ -26,7 +26,7 @@ class WebWrapper():
         self.app.add_url_rule(url, name, function, methods=methods)
 
     def run(self):
-        self.app.run(port=5002)
+        self.app.run(port=6881, host="0.0.0.0")
 
 
 class server(WebWrapper):

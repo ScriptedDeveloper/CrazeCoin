@@ -115,8 +115,15 @@ int recieve_chain() {
 int send_chain() {
 	struct sockaddr_in sockaddr;
 	int opt = 1, new_socket, server_fd = socket(AF_INET, SOCK_STREAM, 0);
+	nlohmann::json j;
+	std::cout << blockchain::path;
 	std::ifstream ifs(blockchain::path);
-	nlohmann::json j = j.parse(ifs);
+	try {
+		j = j.parse(ifs);
+	} catch(...) {
+		std::cout << ifs.rdbuf();
+		exit(1);
+	}
 	std::string json_str = j.dump();
 	std::string next_peer = retrieve_peer(0);
 	char json_char[1024];
