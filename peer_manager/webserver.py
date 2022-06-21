@@ -37,7 +37,9 @@ class server(WebWrapper):
     def start(self):
         self.wrapper.add_endpoint("/peers", "peers", self.api.retrieve_peer_amount, methods=["GET"])
         self.wrapper.add_endpoint("/add_peer", "add_peer", self.api.add_peer, methods=["GET"])
+        self.wrapper.add_endpoint("/add_pending_peers", "add_pending_peer", self.api.add_pending_peer, methods=["GET"])
         self.wrapper.add_endpoint("/get_peers", "get_peers", self.api.get_peers, methods=["GET"])
+        self.wrapper.add_endpoint("/pending_peers", "pending_peers", self.api.retrieve_pending_peers, methods=["GET"])
         self.wrapper.run()
 
 

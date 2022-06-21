@@ -13,3 +13,5 @@ namespace blockchain {
 	bool is_blockchain_empty();
 	void init_blockchain();
 };
+bool is_empty(std::ifstream &ifS);
+
