@@ -181,7 +181,7 @@ int signup_peer() {
 	cpr::Response rpeer_server;
 	std::ifstream ifs(blockchain::path);
 	if (is_empty(ifs)) {
-		rpeer_server = cpr::Get(cpr::Url{blockchain::peer_tracker + "/add_pending_peer"});
+		rpeer_server = cpr::Get(cpr::Url{blockchain::peer_tracker + "/add_pending_peers"});
 	} else {
 		rpeer_server = cpr::Get(cpr::Url{blockchain::peer_tracker + "/add_peer"});
 	}
@@ -193,9 +193,9 @@ int get_peers() {
 	std::ifstream ifsPeer(blockchain::peer_path);
 	nlohmann::json jpeers, jpending, j = j.parse(ifsPeer);
 	cpr::Response rpeer, rpending;
-	while(rpeer.status_code != 200) {
+	while(rpeer.status_code != 200 && rpending.status_code != 200) {
 		rpeer = cpr::Get(cpr::Url{blockchain::peer_tracker + "/get_peers"});
-		rpending = cpr::Get(cpr::Url{blockchain::peer_tracker + "/get_pending_peers"}); // retrieving pending peers
+		rpending = cpr::Get(cpr::Url{blockchain::peer_tracker + "/pending_peers"}); // retrieving pending peers
 	}
 	jpeers = jpeers.parse(rpeer.text);
 	jpending = jpending.parse(rpending.text);
