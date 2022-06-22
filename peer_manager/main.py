@@ -14,6 +14,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from flask import request, jsonify
+from pathlib import Path
 import webserver, json, os
 
 def recover_format():
@@ -21,6 +22,12 @@ def recover_format():
     if(os.path.getsize("peers.json") == 0):
         with open("peers.json", "w") as peers_write:
             json.dump(format, peers_write)
+
+def check_start():
+    j_peers = Path(os.getcwd() + "peers.json")
+    if not j_peers.is_file():
+        open("peers.json", "w").write("")
+
 
 class API:
     def __init__(self):
@@ -66,6 +73,7 @@ class API:
         return str(json.dumps(self.peers_json["pending_peers"]))
 
 if(__name__ == '__main__'):
+    check_start()
     recover_format()
     webserver.server().start() 
         

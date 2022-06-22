@@ -33,6 +33,11 @@ namespace blockchain {
 	const std::string peer_tracker = "192.168.10.148:6881"; // changing later to correct domain
 }
 
+bool exists_file(std::string path) {
+	std::ifstream ifs(path);
+	return ifs.good();
+}
+
 bool is_empty(std::ifstream &ifS) {
 	return ifS.peek() == std::ifstream::traits_type::eof();
 }
@@ -64,13 +69,19 @@ void blockchain::init_blockchain() {
 	}
 }
 
-void create_json(std::string name) {
-	std::ofstream ofs(name);
-	ofs << "{}";
+
+void create_file(std::string path) {
+	std::ofstream ofs(path);
 	ofs.close();
 }
 
 void check_files () {
+	if(!exists_file(blockchain::peer_path)) {
+		create_file(blockchain::peer_path);
+	} else if(!exists_file(blockchain::path)) {
+		create_file(blockchain::path);
+	}
+
 	std::ifstream ifsPeer(blockchain::peer_path);
 	if(is_empty(ifsPeer)) {
 		std::cout << "\n Peer required files not found, creating..." << std::endl;
