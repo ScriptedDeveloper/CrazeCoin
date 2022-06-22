@@ -66,7 +66,9 @@ int block::add_block(block b){
 	std::string index_str = std::to_string(index);
 	nlohmann::json j;
 	this->index++;
+	std::cout << j;
 	this->timestamp = std::to_string(std::chrono::duration_cast<std::chrono::seconds>(time.time_since_epoch()).count());
+	std::cout << j;
 	mine_block();
 	j[index_str]["timestamp"] = this->timestamp;
 	j[index_str]["hash"] = this->hash;
@@ -76,7 +78,7 @@ int block::add_block(block b){
  	std::ofstream ofChain(blockchain::path, std::ios_base::app);
 	ofChain << j;
 	ofChain.close(); // might write a function for just opening/closing blockchain file
-	std::cout << send_chain();
+	//std::cout << send_chain();
 	return 0;
 }
 

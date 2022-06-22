@@ -30,7 +30,7 @@ namespace blockchain {
 	std::string path = std::experimental::filesystem::current_path().u8string() + "/blockchain.json";
 	std::string torrent_file = std::experimental::filesystem::current_path().u8string() + "/discovery.torrent";
 	std::string peer_path = std::experimental::filesystem::current_path().u8string() + "/peers.json";
-	const std::string peer_tracker = "127.0.0.1:5002"; // changing later to correct domain
+	const std::string peer_tracker = "192.168.10.148:6881"; // changing later to correct domain
 }
 
 bool is_empty(std::ifstream &ifS) {
@@ -47,7 +47,7 @@ bool blockchain::is_blockchain_empty() {
 	std::ifstream ifChain(blockchain::path);
 	auto ss = std::stringstream();
 	ss << ifChain.rdbuf();
-	if(ss.str() != "{}") {
+	if(ss.str() != "{}" && ss.str() != "") {
 		return false;
 	}
 	return (bool)is_empty(ifChain);
@@ -71,25 +71,15 @@ void create_json(std::string name) {
 }
 
 void check_files () {
-	std::ifstream ifsBlock(blockchain::path);
 	std::ifstream ifsPeer(blockchain::peer_path);
-	if(is_empty(ifsBlock)) {
-		std::cout << blockchain::path;
-		std::cout << "\n Blockchain required files not found, creating..." << std::endl;
-		create_json(blockchain::path);
-		std::cout << "\nDone!" << std::endl;
-	}
 	if(is_empty(ifsPeer)) {
 		std::cout << "\n Peer required files not found, creating..." << std::endl;
 		clear_peers();
 		std::cout << "\nDone!" << std::endl;
 	}
 	try {
-		ifsBlock.open(blockchain::path);
 		ifsPeer.open(blockchain::peer_path);
-		nlohmann::json j = j.parse(ifsBlock);
 		nlohmann::json j1 = j1.parse(ifsPeer);
-		ifsBlock.close();
 		ifsPeer.close();
 	}
 	catch (...){
@@ -99,7 +89,6 @@ void check_files () {
 		check_files();
 	}
 	ifsPeer.close();
-	ifsBlock.close();
 }
 
 
@@ -107,5 +96,6 @@ void check_files () {
 int main() {
 	check_files();
 	blockchain::init_blockchain();	// Calling start of blockchain
+	//blockchain::generate_genesis_block("ASD");
 	return 0;
 }
