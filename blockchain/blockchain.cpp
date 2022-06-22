@@ -30,7 +30,7 @@ namespace blockchain {
 	std::string path = std::experimental::filesystem::current_path().u8string() + "/blockchain.json";
 	std::string torrent_file = std::experimental::filesystem::current_path().u8string() + "/discovery.torrent";
 	std::string peer_path = std::experimental::filesystem::current_path().u8string() + "/peers.json";
-	const std::string peer_tracker = "192.168.10.100:6881"; // changing later to correct domain
+	const std::string peer_tracker = "192.168.10.148:6881"; // changing later to correct domain
 }
 
 bool is_empty(std::ifstream &ifS) {
@@ -47,7 +47,7 @@ bool blockchain::is_blockchain_empty() {
 	std::ifstream ifChain(blockchain::path);
 	auto ss = std::stringstream();
 	ss << ifChain.rdbuf();
-	if(ss.str() != "{}") {
+	if(ss.str() != "{}" && ss.str() != "") {
 		return false;
 	}
 	return (bool)is_empty(ifChain);

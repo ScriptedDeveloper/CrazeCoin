@@ -49,7 +49,7 @@ class API:
         return jsonify({"status" : 200, "message" : "SUCCESS"}) 
  
     def add_pending_peer(self): # same code as add_peer() with minor changes
-        if self.check_peer(request.remote_addr) == False:
+        if self.check_pending(request.remote_addr) == False:
             return jsonify({"status" : 203, "message" : "SIGNED"})
         self.peers_json["pending_peers"].append(str(request.remote_addr))
         open("peers.json", "w").write(json.dumps(self.peers_json))
