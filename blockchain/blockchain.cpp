@@ -70,10 +70,9 @@ void blockchain::init_blockchain() {
 }
 
 
-int create_file(std::string path) {
+void create_file(std::string path) {
 	std::ofstream ofs(path);
 	ofs.close();
-	return 0;
 }
 
 void check_files () {
