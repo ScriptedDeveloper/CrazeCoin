@@ -7,6 +7,7 @@ class block {
 		std::string hash;
 		std::string timestamp;
 		std::string previous_hash;
+		std::string merkle_root;  // hash of all blocks, see bitcoin docs
 		std::string data;
 		int nounce;
 		int index;
@@ -20,7 +21,9 @@ class block {
 		
 		std::string generate_hash(std::string plain_text);	
 		std::string mine_block();
-		int add_block(block b);
+		std::string get_timestamp();
+		int test_block();
+		int add_block();
 };
 
-std::string sha256_generate(std::string plain); // generates sha256 hash from a string
+std::string generate_hash(std::string plain); // generates sha256 hash from a string

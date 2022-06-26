@@ -9,6 +9,7 @@ CFLAGS		+= --std=c++17
 CFLAGS		+= -g
 CFLAGS		+= -lcpr
 
+
 SRC                           := $(shell find . -type f -name '*.cpp')
 
 blockchain.out : $(SRC)
@@ -22,4 +23,4 @@ run : blockchain.out
 	./$<
 
 clean : blockchain.out
-	rm -R $<
+	rm -R $^

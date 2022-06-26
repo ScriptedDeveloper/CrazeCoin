@@ -13,6 +13,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <fstream>
 #include <iostream>
 #include <cstdint>
 #include <sstream>
@@ -57,28 +58,47 @@ std::string block::mine_block() {
 	return this->hash;
 }
 
-int block::add_block(block b){
+
+std::string block::get_timestamp() {
+	auto time = std::chrono::system_clock::now();
+	return std::to_string(std::chrono::duration_cast<std::chrono::seconds>(time.time_since_epoch()).count());
+
+}
+
+int block::add_block(){
 	if(this->data.empty() || this->previous_hash.empty()) {
 		return 1; // block data is not initialized
 	}
 
-	auto time = std::chrono::system_clock::now();
 	std::string index_str = std::to_string(index);
 	nlohmann::json j;
 	this->index++;
-	std::cout << j;
-	this->timestamp = std::to_string(std::chrono::duration_cast<std::chrono::seconds>(time.time_since_epoch()).count());
-	std::cout << j;
+	this->timestamp = get_timestamp();
 	mine_block();
 	j[index_str]["timestamp"] = this->timestamp;
 	j[index_str]["hash"] = this->hash;
 	j[index_str]["data"] = this->data;
 	j[index_str]["previous_hash"] = this->previous_hash;
+	j[index_str]["difficulty"] = this->difficulty;
+	j[index_str]["nounce"] = this->nounce; // adding nounce for other miners to check chain
+	this->nounce = 0; // clearing nounce for next block
+	if(this->merkle_root.empty()) {
+		j["merkle_root"] = this->hash; // if its the genesis block, use hash of current block
+	
+	} else {
+		j["merkle_root"] = generate_hash(this->merkle_root + this->previous_hash);
+	}
 	j["blocks"] = this->index;
  	std::ofstream ofChain(blockchain::path, std::ios_base::app);
 	ofChain << j;
 	ofChain.close(); // might write a function for just opening/closing blockchain file
 	//std::cout << send_chain();
+	return 0;
+}
+
+int block::test_block() {
+	this->data = "test";
+	add_block();
 	return 0;
 }
 

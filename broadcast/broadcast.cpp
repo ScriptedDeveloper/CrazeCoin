@@ -87,6 +87,37 @@ int check_node(std::string ip) { // optimal solution for now, will implement sen
 }
 */
 
+int check_block(nlohmann::json jblock) {
+	std::ifstream ifchain(blockchain::path);
+	nlohmann::json jchain = jchain.parse(ifchain);
+	block b(jchain["blocks"]["previous_hash"], jblock["data"]);
+	b.timestamp = jblock["timestamp"];
+	b.nounce = jblock["nounce"];
+	b.data = jblock["data"];
+	if(b.mine_block() != jblock["hash"]) {
+		return 1; // block is invalid and has been rejected
+	}
+	return 0; // block is valid, allowing
+}
+
+static int save_block(nlohmann::json jblock) {
+	std::fstream fchain(blockchain::path, std::fstream::in | std::fstream::out);	
+	if(check_block(jblock) != 0) {
+		return 1; // block is invalid
+	}
+	try {
+		nlohmann::json jchain = jchain.parse(fchain);
+		int blocks_num = jchain["blocks"];
+		jchain["blocks"] = blocks_num++;
+		jchain["blocks"][blocks_num] = jblock;
+		fchain >> jchain; // saving edits to blockchain
+
+	} catch(nlohmann::json::parse_error) {
+		return 1; // blockchain is invalid json
+	}
+	return 0;
+}
+
 int recieve_chain() {
 	struct sockaddr_in sockaddr;
 	int isocket, client_fd;
@@ -94,6 +125,7 @@ int recieve_chain() {
 	int optional, inet;
 	char buff[1024] = {0}; // recieving blockchain
 	std::ofstream ofsBlock;
+	std::ifstream ifsblock;
 	if(isocket < 0) {
 		error_handler("SOCKET CREATION");
 		recieve_chain();
@@ -117,22 +149,42 @@ int recieve_chain() {
 	std::cout << "Waiting for blockchain..." << std::endl;
 	read(isocket, buff, 1024);
 	buff[strlen(buff)] = '\0';
-	ofsBlock.open(blockchain::path);
-	std::cout << buff << std::endl;
-	ofsBlock << buff;
+	ifsblock.open(blockchain::path);
+	if(is_empty(ifsblock)) {
+		ifsblock.close();
+		ofsBlock.open(blockchain::path);
+		std::cout << buff << std::endl;
+		ofsBlock << buff;
+	} else {
+		nlohmann::json jblock;
+		try {
+			jblock = jblock.parse(buff);
+
+		} catch(nlohmann::json::parse_error) {
+			return 1; // block is invalid json, failing
+		}
+		if(save_block(jblock) != 0) {
+			return 1; // either invalid json or manipulated block
+		}
+	}
 	return 0;
 }
 
-int send_chain() {
+int send_chain(bool is_blockchain) {
 	struct sockaddr_in sockaddr;
 	int opt = 1, new_socket, server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	nlohmann::json j;
-	std::ifstream ifs(blockchain::path);
+	std::ifstream ifs;
+	if(is_blockchain) {
+		ifs.open(blockchain::path);
+	} else {
+		ifs.open("block.json");
+	}
 	try {
 		j = j.parse(ifs);
 	} catch(...) {
 		std::cout << ifs.rdbuf();
-		exit(1);
+		exit(1); // parsing block(chain) failed
 	}
 	std::string json_str = j.dump();
 	std::string next_peer = retrieve_peer(0);
@@ -148,21 +200,21 @@ int send_chain() {
 	*/
 	if(server_fd == 0) {
 		error_handler("SERVER_FD");
-		send_chain();
+		send_chain(is_blockchain);
 	}
 	if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) != 0) {
 		error_handler("SETSOCKOPT");
-		send_chain();
+		send_chain(is_blockchain);
 	}
 	sockaddr.sin_port = htons(PORT);
 	sockaddr.sin_family = AF_INET;
 	if(bind(server_fd, (struct sockaddr*)&sockaddr, sizeof(sockaddr))< 0) {
 		error_handler("BIND");
-		send_chain();
+		send_chain(is_blockchain);
 	}
 	if(listen(server_fd, 5) < 0) {
 		error_handler("LISTEN");
-		send_chain();
+		send_chain(is_blockchain);
 	}
 	std::cout << "\nConnecting to peer : " << next_peer << std::endl;
 	socklen_t size = sizeof(sockaddr);

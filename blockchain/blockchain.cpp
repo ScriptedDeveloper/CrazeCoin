@@ -39,7 +39,8 @@ bool is_empty(std::ifstream &ifS) {
 
 block blockchain::generate_genesis_block(std::string data) {
 	block b("0", data);
-	b.add_block(b);
+	b.index = 0;
+	b.add_block();
 	return b;
 }
 
@@ -56,11 +57,11 @@ bool blockchain::is_blockchain_empty() {
 void blockchain::init_blockchain() {
 	clear_peers();
 	signup_peer();
-	get_peers(); // Connecting to other peers
+	get_peers(); // Connecting to other peersblo
 	if(blockchain::is_blockchain_empty()) {
 		recieve_chain();
 	} else {
-		send_chain();
+		send_chain(true);
 	}
 }
 
@@ -94,8 +95,9 @@ void check_files () {
 
 
 int main() {
+	std::ifstream ifs(blockchain::path);
 	check_files();
+	blockchain::generate_genesis_block("ASD");
 	blockchain::init_blockchain();	// Calling start of blockchain
-	//blockchain::generate_genesis_block("ASD");
 	return 0;
 }
