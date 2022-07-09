@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <nlohmann/json.hpp>
 
 class block {
 	public:
@@ -22,8 +23,10 @@ class block {
 		std::string generate_hash(std::string plain_text);	
 		std::string mine_block();
 		std::string get_timestamp();
+		std::string verify_block();
 		int test_block();
 		int add_block();
+		int create_block_file(nlohmann::json j);
 };
 
 std::string generate_hash(std::string plain); // generates sha256 hash from a string

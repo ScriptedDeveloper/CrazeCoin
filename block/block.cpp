@@ -58,6 +58,10 @@ std::string block::mine_block() {
 	return this->hash;
 }
 
+std::string block::verify_block() {
+	return generate_hash(this->previous_hash + this->data + std::to_string(this->nounce) + this->timestamp);
+}
+
 
 std::string block::get_timestamp() {
 	auto time = std::chrono::system_clock::now();
@@ -65,14 +69,25 @@ std::string block::get_timestamp() {
 
 }
 
-int block::add_block(){
+int block::create_block_file(nlohmann::json j) {
+	std::ofstream ofsblock("block.json");
+	ofsblock << j;
+	return 0;
+}
+
+int block::add_block(){ // issue is that json is not correct
+	nlohmann::json j;
 	if(this->data.empty() || this->previous_hash.empty()) {
 		return 1; // block data is not initialized
 	}
-
-	std::string index_str = std::to_string(index);
-	nlohmann::json j;
+	if(blockchain::is_blockchain_empty()) {
+		this->index = 0;
+	} else {
+		this->index = blockchain::block_number();
+		j = blockchain::blockchain_json();
+	}
 	this->index++;
+	std::string index_str = std::to_string(this->index);
 	this->timestamp = get_timestamp();
 	mine_block();
 	j[index_str]["timestamp"] = this->timestamp;
@@ -86,20 +101,17 @@ int block::add_block(){
 		j["merkle_root"] = this->hash; // if its the genesis block, use hash of current block
 	
 	} else {
-		j["merkle_root"] = generate_hash(this->merkle_root + this->previous_hash);
+		this->merkle_root =  generate_hash(this->merkle_root + this->previous_hash);
+		j["merkle_root"] = this->merkle_root;
 	}
 	j["blocks"] = this->index;
- 	std::ofstream ofChain(blockchain::path, std::ios_base::app);
+ 	std::ofstream ofChain(blockchain::path);
 	ofChain << j;
 	ofChain.close(); // might write a function for just opening/closing blockchain file
-	//std::cout << send_chain();
+	block::create_block_file(j[index_str]);
+	//std::cout << send_chain(false); // sending block over network CHANGED
 	return 0;
 }
 
-int block::test_block() {
-	this->data = "test";
-	add_block();
-	return 0;
-}
 
 

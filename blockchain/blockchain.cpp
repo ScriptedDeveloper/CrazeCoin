@@ -30,7 +30,7 @@ namespace blockchain {
 	std::string path = std::experimental::filesystem::current_path().u8string() + "/blockchain.json";
 	std::string torrent_file = std::experimental::filesystem::current_path().u8string() + "/discovery.torrent";
 	std::string peer_path = std::experimental::filesystem::current_path().u8string() + "/peers.json";
-	const std::string peer_tracker = "192.168.10.101:6881"; // changing later to correct domain
+	const std::string peer_tracker = "192.168.10.104:6882"; // changing later to correct domain
 }
 
 bool is_empty(std::ifstream &ifS) {
@@ -48,21 +48,36 @@ bool blockchain::is_blockchain_empty() {
 	std::ifstream ifChain(blockchain::path);
 	auto ss = std::stringstream();
 	ss << ifChain.rdbuf();
-	if(ss.str() != "{}") {
+	ifChain.close();
+	if(ss.str() != "{}" && !ss.str().empty()) {
 		return false;
 	}
 	return (bool)is_empty(ifChain);
+}
+
+int blockchain::block_number() {
+	std::ifstream ifschain(blockchain::path);
+	nlohmann::json jchain = jchain.parse(ifschain);
+	return jchain["blocks"];
+}
+
+nlohmann::json blockchain::blockchain_json() {
+	std::ifstream ifschain(blockchain::path);
+	nlohmann::json jchain = jchain.parse(ifschain);
+	return jchain;
 }
 
 void blockchain::init_blockchain() {
 	clear_peers();
 	signup_peer();
 	get_peers(); // Connecting to other peersblo
+	
 	if(blockchain::is_blockchain_empty()) {
 		recieve_chain();
 	} else {
 		send_chain(true);
 	}
+	
 }
 
 void create_json(std::string name) {
@@ -85,7 +100,6 @@ void check_files () {
 	}
 	catch (...){
 		std::cout << "Corrupt files found! Cleaning up..." << std::endl;
-		std::remove(blockchain::path.c_str());
 		std::remove(blockchain::peer_path.c_str());
 		check_files();
 	}
@@ -95,9 +109,17 @@ void check_files () {
 
 
 int main() {
-	std::ifstream ifs(blockchain::path);
 	check_files();
 	blockchain::generate_genesis_block("ASD");
 	blockchain::init_blockchain();	// Calling start of blockchain
+	/*
+	std::ifstream ifs(blockchain::path);
+	nlohmann::json j_ = j_.parse(ifs);
+	int blocks = j_["blocks"];
+	std::string blocks_string = std::to_string(blocks);
+	block b(j_[blocks_string]["hash"], "ASD2");
+	b.add_block();
+	send_chain(false);
+	*/
 	return 0;
 }
