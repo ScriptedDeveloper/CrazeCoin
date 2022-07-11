@@ -13,7 +13,8 @@ namespace blockchain {
 	bool is_blockchain_empty();
 	int block_number();
 	void init_blockchain();
+	void create_json(std::string name);
+	bool is_empty(std::ifstream &ifS);
+	void check_files();
 	nlohmann::json blockchain_json();
 };
-bool is_empty(std::ifstream &ifS);
-void create_json(std::string name);

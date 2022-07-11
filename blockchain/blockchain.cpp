@@ -33,7 +33,7 @@ namespace blockchain {
 	const std::string peer_tracker = "192.168.10.104:6882"; // changing later to correct domain
 }
 
-bool is_empty(std::ifstream &ifS) {
+bool blockchain::is_empty(std::ifstream &ifS) {
 	return ifS.peek() == std::ifstream::traits_type::eof();
 }
 
@@ -68,29 +68,29 @@ nlohmann::json blockchain::blockchain_json() {
 }
 
 void blockchain::init_blockchain() {
-	clear_peers();
-	signup_peer();
-	get_peers(); // Connecting to other peersblo
+	broadcast::clear_peers();
+	broadcast::signup_peer();
+	broadcast::get_peers(); // Connecting to other peersblo
 	
 	if(blockchain::is_blockchain_empty()) {
-		recieve_chain();
+		broadcast::recieve_chain();
 	} else {
-		send_chain(true);
+		broadcast::send_chain(true);
 	}
 	
 }
 
-void create_json(std::string name) {
+void blockchain::create_json(std::string name) {
 	std::ofstream ofs(name);
 	ofs << "{}";
 	ofs.close();
 }
 
-void check_files () {
+void blockchain::check_files () {
 	std::ifstream ifsPeer(blockchain::peer_path);
-	if(is_empty(ifsPeer)) {
+	if(blockchain::is_empty(ifsPeer)) {
 		std::cout << "\n Peer required files not found, creating..." << std::endl;
-		clear_peers();
+		broadcast::clear_peers();
 		std::cout << "\nDone!" << std::endl;
 	}
 	try {
@@ -109,17 +109,18 @@ void check_files () {
 
 
 int main() {
-	check_files();
-	blockchain::generate_genesis_block("ASD");
+	blockchain::check_files();
+	//blockchain::generate_genesis_block("ASD"); blockchain won't start without genesis block
 	blockchain::init_blockchain();	// Calling start of blockchain
 	/*
+	broadcast::send_chain(true);
 	std::ifstream ifs(blockchain::path);
 	nlohmann::json j_ = j_.parse(ifs);
 	int blocks = j_["blocks"];
 	std::string blocks_string = std::to_string(blocks);
 	block b(j_[blocks_string]["hash"], "ASD2");
 	b.add_block();
-	send_chain(false);
+	broadcast::send_chain(false);
 	*/
 	return 0;
 }

@@ -41,13 +41,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "broadcast.h"
 
 
-void error_handler(std::string message) {
+void broadcast::error_handler(std::string message) {
 	std::cout << "Failed at : " << message << std::endl;
 	std::cout << strerror(errno) << std::endl;
 	sleep(3);
 }
 
-std::string retrieve_peer(int n) {
+std::string broadcast::retrieve_peer(int n) {
 	std::ifstream ifs(blockchain::peer_path);
 	std::string peer;
 	nlohmann::json j;
@@ -55,13 +55,13 @@ std::string retrieve_peer(int n) {
 		j = j.parse(ifs);
 		peer = j["peers"][n]; // returning n element at the moment
 	} catch(...) { // in case peer.json has been manipulated or only pending peers
-		create_json(blockchain::peer_path);
+		blockchain::create_json(blockchain::peer_path);
 		blockchain::init_blockchain();	
 	}
 	return peer;
 }
 
-std::string retrieve_pending(int n) { // same as retrieve_peer with small changes
+std::string broadcast::retrieve_pending(int n) { // same as retrieve_peer with small changes
 	std::ifstream ifs(blockchain::peer_path);
 	nlohmann::json j;
 	try {
@@ -72,7 +72,7 @@ std::string retrieve_pending(int n) { // same as retrieve_peer with small change
 	return j["pending_peers"][n]; // instead of peers, returning pending_peers
 }
 
-void clear_peers() { 
+void broadcast::clear_peers() { 
 	std::ofstream ofs(blockchain::peer_path);
 	ofs << "{\"peers\" : [], \"pending_peers\" : []}";
 	ofs.close();
@@ -89,7 +89,7 @@ int check_node(std::string ip) { // optimal solution for now, will implement sen
 }
 */
 
-int check_block(nlohmann::json jblock) {
+int broadcast::check_block(nlohmann::json jblock) {
 	std::string prev_hash = jblock["previous_hash"];
 	block b(prev_hash, jblock["data"]);
 	b.timestamp = jblock["timestamp"];
@@ -101,7 +101,7 @@ int check_block(nlohmann::json jblock) {
 	return 0; // block is valid, allowing
 }
 
-static int save_block(nlohmann::json jblock) {
+int broadcast::save_block(nlohmann::json jblock) {
 	std::ofstream ofchain;
 	std::ifstream ifschain(blockchain::path);
 	if(check_block(jblock) != 0) {
@@ -124,7 +124,7 @@ static int save_block(nlohmann::json jblock) {
 }
 
 
-int recieve_chain() {
+int broadcast::recieve_chain() {
 	struct sockaddr_in sockaddr;
 	int isocket, client_fd;
  	isocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -156,7 +156,7 @@ int recieve_chain() {
 	read(isocket, buff, 1024);
 	buff[strlen(buff)] = '\0';
 	ifsblock.open(blockchain::path);
-	if(is_empty(ifsblock)) {
+	if(blockchain::is_empty(ifsblock)) {
 		ifsblock.close();
 		ofsBlock.open(blockchain::path);
 		std::cout << buff << std::endl;
@@ -177,7 +177,7 @@ int recieve_chain() {
 }
 
 
-int send_chain(bool is_blockchain) {
+int broadcast::send_chain(bool is_blockchain) {
 	struct sockaddr_in sockaddr;
 	int opt = 1, new_socket, server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	nlohmann::json j;
@@ -237,10 +237,10 @@ int send_chain(bool is_blockchain) {
 	return 0;
 }
 
-int signup_peer() {
+int broadcast::signup_peer() {
 	cpr::Response rpeer_server;
 	std::ifstream ifs(blockchain::path);
-	if (is_empty(ifs)) {
+	if (blockchain::is_empty(ifs)) {
 		rpeer_server = cpr::Get(cpr::Url{blockchain::peer_tracker + "/add_pending_peers"});
 	} else {
 		rpeer_server = cpr::Get(cpr::Url{blockchain::peer_tracker + "/add_peer"});
@@ -249,7 +249,7 @@ int signup_peer() {
 	return 0;
 }
 
-int get_peers() {
+int broadcast::get_peers() {
 	std::ifstream ifsPeer(blockchain::peer_path);
 	nlohmann::json jpeers, jpending, j = j.parse(ifsPeer);
 	cpr::Response rpeer, rpending;

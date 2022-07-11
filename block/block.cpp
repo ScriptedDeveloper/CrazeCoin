@@ -75,21 +75,10 @@ int block::create_block_file(nlohmann::json j) {
 	return 0;
 }
 
-int block::add_block(){ // issue is that json is not correct
-	nlohmann::json j;
-	if(this->data.empty() || this->previous_hash.empty()) {
-		return 1; // block data is not initialized
+nlohmann::json block::set_data(nlohmann::json j, std::string index_str) {
+	if(this->timestamp.empty() || this->hash.empty()) { // not going to check for all, assuming all vars are empty
+		return NULL;
 	}
-	if(blockchain::is_blockchain_empty()) {
-		this->index = 0;
-	} else {
-		this->index = blockchain::block_number();
-		j = blockchain::blockchain_json();
-	}
-	this->index++;
-	std::string index_str = std::to_string(this->index);
-	this->timestamp = get_timestamp();
-	mine_block();
 	j[index_str]["timestamp"] = this->timestamp;
 	j[index_str]["hash"] = this->hash;
 	j[index_str]["data"] = this->data;
@@ -105,10 +94,29 @@ int block::add_block(){ // issue is that json is not correct
 		j["merkle_root"] = this->merkle_root;
 	}
 	j["blocks"] = this->index;
+	return j;
+}
+
+int block::add_block(){ // issue is that json is not correct
+	nlohmann::json j, j_new;
+	if(this->data.empty() || this->previous_hash.empty()) {
+		return 1; // block data is not initialized
+	}
+	if(blockchain::is_blockchain_empty()) {
+		this->index = 0;
+	} else {
+		this->index = blockchain::block_number();
+		j = blockchain::blockchain_json();
+	}
+	this->index++;
+	std::string index_str = std::to_string(this->index);
+	this->timestamp = get_timestamp();
+	mine_block();
+	j_new = set_data(j, index_str);
  	std::ofstream ofChain(blockchain::path);
-	ofChain << j;
+	ofChain << j_new;
 	ofChain.close(); // might write a function for just opening/closing blockchain file
-	block::create_block_file(j[index_str]);
+	block::create_block_file(j_new[index_str]);
 	//std::cout << send_chain(false); // sending block over network CHANGED
 	return 0;
 }
