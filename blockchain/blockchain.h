@@ -12,6 +12,7 @@ namespace blockchain {
 	static block generate_genesis_block(std::string data);	
 	bool is_blockchain_empty();
 	int block_number();
+	int check_chain();
 	void init_blockchain();
 	void create_json(std::string name);
 	bool is_empty(std::ifstream &ifS);

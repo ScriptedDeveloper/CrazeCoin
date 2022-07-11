@@ -55,6 +55,17 @@ bool blockchain::is_blockchain_empty() {
 	return (bool)is_empty(ifChain);
 }
 
+int blockchain::check_chain() {
+	nlohmann::json jchain = blockchain::blockchain_json();
+	int blocks = jchain["blocks"];
+	for(int i = 0; i < blocks; i++) {
+		if(broadcast::check_block(jchain[std::to_string(blocks)]) != 0) {
+			return 1; // some block has failed the check, blockchain is compromised!
+		}
+	}
+	return 0;
+}
+
 int blockchain::block_number() {
 	std::ifstream ifschain(blockchain::path);
 	nlohmann::json jchain = jchain.parse(ifschain);
@@ -75,7 +86,12 @@ void blockchain::init_blockchain() {
 	if(blockchain::is_blockchain_empty()) {
 		broadcast::recieve_chain();
 	} else {
-		broadcast::send_chain(true);
+		if(blockchain::check_chain() == 1) {
+			std::ofstream ofs(blockchain::path); // clearing blockchain content
+			broadcast::recieve_chain();
+		} else {
+			broadcast::send_chain(true);
+		}
 	}
 	
 }
@@ -110,7 +126,7 @@ void blockchain::check_files () {
 
 int main() {
 	blockchain::check_files();
-	//blockchain::generate_genesis_block("ASD"); blockchain won't start without genesis block
+	//blockchain::generate_genesis_block("ASD"); // blockchain won't start without genesis block
 	blockchain::init_blockchain();	// Calling start of blockchain
 	/*
 	broadcast::send_chain(true);
