@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <arpa/inet.h>
 #include <errno.h>
 #include <cpr/cpr.h>
+#include <cpr/error.h>
 #include <cpr/api.h>
 //#include <libtorrent/entry.hpp> // Network is basically a Torrent.
 //#include <libtorrent/alert.hpp>
@@ -78,16 +79,25 @@ void broadcast::clear_peers() {
 	ofs.close();
 }
 
+void broadcast::fail_emergency_mode() {
+	std::cout << "(EMERGENCY MODE) No (pending) peers found, quitting!";
+	exit(1); // Emergency mode has failed, quitting.
+}
 
-/*
-int check_node(std::string ip) { // optimal solution for now, will implement senders/recievers list later
-	cpr::Response rip = cpr::Get(cpr::Url{"https://api.ipify.org/"});
-	if(ip == rip.text) {
-		return 1;
+
+int broadcast::check_emergency_mode() {
+	std::cout << "(EMERGENCY MODE) ACTIVATED" << std::endl;
+	std::ifstream ifs(blockchain::peer_path);
+	nlohmann::json jpeers = jpeers.parse(ifs);
+	if(jpeers["peers"].empty()){ // peers JSON file is empty
+		return 1; // peers empty
+	} else if(jpeers["pending_peers"].empty()) {
+		return -1; // pending_peers empty
+	} else if(jpeers["pending_peers"].empty() && jpeers["peers"].empty()) {
+		broadcast::fail_emergency_mode(); // everything empty, failed mode
 	}
 	return 0;
 }
-*/
 
 int broadcast::check_block(nlohmann::json jblock) {
 	std::string prev_hash = jblock["previous_hash"];
@@ -132,6 +142,9 @@ int broadcast::recieve_chain() {
 	char buff[1024] = {0}; // recieving blockchain
 	std::ofstream ofsBlock;
 	std::ifstream ifsblock;
+	if(broadcast::check_emergency_mode() == 1) {
+		broadcast::fail_emergency_mode(); // no peers available, failed
+	}
 	if(isocket < 0) {
 		error_handler("SOCKET CREATION");
 		recieve_chain();
@@ -182,6 +195,9 @@ int broadcast::send_chain(bool is_blockchain) {
 	int opt = 1, new_socket, server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	nlohmann::json j;
 	std::ifstream ifs;
+	if(broadcast::check_emergency_mode() == -1) {
+		broadcast::fail_emergency_mode(); // same as recieve_chain
+	}
 	if(is_blockchain) {
 		ifs.open(blockchain::path);
 	} else {
@@ -241,9 +257,12 @@ int broadcast::signup_peer() {
 	cpr::Response rpeer_server;
 	std::ifstream ifs(blockchain::path);
 	if (blockchain::is_empty(ifs)) {
-		rpeer_server = cpr::Get(cpr::Url{blockchain::peer_tracker + "/add_pending_peers"});
+		rpeer_server = cpr::Get(cpr::Url{blockchain::peer_tracker + "/add_pending_peers"}, cpr::Timeout{20000});
 	} else {
-		rpeer_server = cpr::Get(cpr::Url{blockchain::peer_tracker + "/add_peer"});
+		rpeer_server = cpr::Get(cpr::Url{blockchain::peer_tracker + "/add_peer"}, cpr::Timeout{20000});
+	}
+	if(rpeer_server.status_code != 200) {
+		return 1; // signing up failed, emergency mode engaged soon!
 	}
 	ifs.close();
 	return 0;

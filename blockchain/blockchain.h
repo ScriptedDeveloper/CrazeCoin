@@ -1,4 +1,7 @@
 #pragma once
+#ifndef __unix__
+	#error "UNIX ONLY, WINDOWS NOT SUPPORTED!"
+#endif
 #include <iostream>
 #include <fstream>
 #include <experimental/filesystem>

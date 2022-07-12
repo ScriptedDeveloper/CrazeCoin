@@ -79,21 +79,18 @@ nlohmann::json blockchain::blockchain_json() {
 }
 
 void blockchain::init_blockchain() {
-	broadcast::clear_peers();
-	broadcast::signup_peer();
-	broadcast::get_peers(); // Connecting to other peersblo
-	
+	if(broadcast::signup_peer() == 0) { // if server doesnt respond, skip
+ 		broadcast::clear_peers(); // clearing only if server is available
+		broadcast::get_peers(); // Connecting to other peers
+	}
 	if(blockchain::is_blockchain_empty()) {
 		broadcast::recieve_chain();
+	} else if(blockchain::check_chain() == 1) {
+		std::ofstream ofs(blockchain::path); // clearing blockchain content
+		broadcast::recieve_chain(); // returning to waiting for valid blockchain
 	} else {
-		if(blockchain::check_chain() == 1) {
-			std::ofstream ofs(blockchain::path); // clearing blockchain content
-			broadcast::recieve_chain();
-		} else {
-			broadcast::send_chain(true);
-		}
+		broadcast::send_chain(true);
 	}
-	
 }
 
 void blockchain::create_json(std::string name) {

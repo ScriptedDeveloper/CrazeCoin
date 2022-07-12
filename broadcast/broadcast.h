@@ -11,8 +11,10 @@ namespace broadcast {
 	int recieve_chain();
 	int signup_peer();
 	int save_block(nlohmann::json jblock);
+	int check_emergency_mode();
+	int peers_empty();
 	void clear_peers();
 	void error_handler(std::string message);
-
+	void fail_emergency_mode();
 }
 
