@@ -22,9 +22,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <chrono>
 #include <nlohmann/json.hpp>
 #include <openssl/sha.h>
-#include "../blockchain/blockchain.h"
-#include "../broadcast/broadcast.h"
-#include "block.h"
+#include "../include/blockchain.h"
+#include "../include/broadcast.h"
+#include "../include/block.h"
 
 block::block(std::string previous_hash, std::string data){
 	this->previous_hash = previous_hash;

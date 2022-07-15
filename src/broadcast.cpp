@@ -38,8 +38,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //#include <libtorrent/session.hpp>
 //#include <libtorrent/torrent_info.hpp>
 #include <nlohmann/json.hpp>
-#include "../blockchain/blockchain.h"
-#include "broadcast.h"
+#include "../include/blockchain.h"
+#include "../include/broadcast.h"
 
 
 void broadcast::error_handler(std::string message) {
@@ -86,7 +86,6 @@ void broadcast::fail_emergency_mode() {
 
 
 int broadcast::check_emergency_mode() {
-	std::cout << "(EMERGENCY MODE) ACTIVATED" << std::endl;
 	std::ifstream ifs(blockchain::peer_path);
 	nlohmann::json jpeers = jpeers.parse(ifs);
 	if(jpeers["peers"].empty()){ // peers JSON file is empty

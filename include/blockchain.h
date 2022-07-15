@@ -5,7 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <experimental/filesystem>
-#include "../block/block.h"
+#include "block.h"
 
 namespace blockchain {
 	extern std::string torrent_file; // The BitTorrent Protocol is used for Peer Discovery

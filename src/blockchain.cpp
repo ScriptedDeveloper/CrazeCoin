@@ -21,10 +21,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstdio>
 #include <experimental/filesystem>
 #include <nlohmann/json.hpp>
-#include "blockchain.h"
+#include "../include/blockchain.h"
 //#include <libtorrent/torrent_handle.hpp>
-#include "../block/block.h"
-#include "../broadcast/broadcast.h"
+#include "../include/block.h"
+#include "../include/broadcast.h"
 
 namespace blockchain {
 	std::string path = std::experimental::filesystem::current_path().u8string() + "/blockchain.json";
@@ -120,20 +120,3 @@ void blockchain::check_files () {
 }
 
 
-
-int main() {
-	blockchain::check_files();
-	//blockchain::generate_genesis_block("ASD"); // blockchain won't start without genesis block
-	blockchain::init_blockchain();	// Calling start of blockchain
-	/*
-	broadcast::send_chain(true);
-	std::ifstream ifs(blockchain::path);
-	nlohmann::json j_ = j_.parse(ifs);
-	int blocks = j_["blocks"];
-	std::string blocks_string = std::to_string(blocks);
-	block b(j_[blocks_string]["hash"], "ASD2");
-	b.add_block();
-	broadcast::send_chain(false);
-	*/
-	return 0;
-}
