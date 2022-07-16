@@ -13,8 +13,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <fstream>
 #include <iostream>
+#include <fstream>
 #include <cstdint>
 #include <sstream>
 #include <string>
