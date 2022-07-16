@@ -4,10 +4,11 @@
 #include <cryptopp/cryptlib.h>
 #include <cryptopp/files.h>
 #include <cryptopp/rsa.h>
+#include <cryptopp/osrng.h>
 #include "../include/rsa.h"
 
 CryptoPP::RSA::PrivateKey rsa_wrapper::generate_private_key() {
-	CryptoPP::RandomNumberGenerator numgen;
+	CryptoPP::AutoSeededRandomPool numgen;
 	CryptoPP::InvertibleRSAFunction params;
 	CryptoPP::RSA::PrivateKey privkey(params);
 	privkey.GenerateRandomWithKeySize(numgen, 4096); // generating private key, see Crypto++ docs for more details

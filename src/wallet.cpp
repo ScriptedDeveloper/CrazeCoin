@@ -23,7 +23,7 @@ int wallet::create_wallet() {
 }
 
 int wallet::check_parameters(int argc, char **argv, std::string arg) {
-	for(int i = 0; i < argc; i++) {
+	for(int i = 1; i < argc; i++) {
 		if(argv[i] == arg) {
 			return 0; // arg has been found
 		}
@@ -37,11 +37,11 @@ int wallet::show_help() {
 }
 
 int wallet::init_wallet(int argc, char ** argv) {
-	if(argc != 2 && argc != 1) {
+	if(argc == 1) {
 		std::cout << "wallet : missing operand\nwallet <file> <argument>\nTry wallet help for more information.";
 		return 1; // all params not satisfied
-	} else if(argc == 1) {
-		if(check_parameters(argc, argv, "help")) {
+	} else if(argc == 2) {
+		if(!check_parameters(argc, argv, "help")) {
 			show_help();
 		}
 	}
