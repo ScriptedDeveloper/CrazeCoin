@@ -1,3 +1,5 @@
+#include <cryptopp/config_int.h>
+#include <cryptopp/files.h>
 #include <iostream>
 #include <fstream>
 #include "../include/blockchain.h"
@@ -16,11 +18,19 @@ bool wallet::is_empty() {
 	return blockchain::is_empty(ifswallet);
 }
 
-int wallet::create_wallet() {
+int wallet::create_wallet(char **argv) {
 	CryptoPP::RSA::PrivateKey prikey = rsa_wrapper::generate_private_key();
-	rsa_wrapper::save_private_key("wallet", prikey);
+	rsa_wrapper::save_private_key(argv[1], prikey);
 	return 0;
 }
+
+CryptoPP::RSA::PrivateKey wallet::open_wallet(std::string filename) {
+	std::ifstream ifs(filename);
+	CryptoPP::RSA::PrivateKey privkey;
+	path = filename; // changing filename local to namespace
+	rsa_wrapper::load_private_key(path, privkey);
+	return privkey;
+}	
 
 int wallet::check_parameters(int argc, char **argv, std::string arg) {
 	for(int i = 1; i < argc; i++) {
@@ -40,14 +50,18 @@ int wallet::init_wallet(int argc, char ** argv) {
 	if(argc == 1) {
 		std::cout << "wallet : missing operand\nwallet <file> <argument>\nTry wallet help for more information.";
 		return 1; // all params not satisfied
-	} else if(argc == 2) {
+	} else if(argc == 2 || argc == 1) {
 		if(!check_parameters(argc, argv, "help")) {
 			show_help();
 		}
 	}
 	if(wallet::is_empty()) {
-		wallet::create_wallet();
+		wallet::create_wallet(argv);
 	}
+	//Construction area
+	CryptoPP::RSA::PrivateKey privkey = open_wallet(argv[1]);
+	rsa_wrapper::sign_data("test", privkey);
+	//Construction area
 	return 0;
 }
 

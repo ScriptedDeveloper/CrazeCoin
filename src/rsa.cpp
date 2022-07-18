@@ -1,5 +1,7 @@
 // written with Crypto++ wiki
+#include <cryptopp/config_int.h>
 #include <cryptopp/queue.h>
+#include <cryptopp/secblockfwd.h>
 #include <iostream>
 #include <cryptopp/cryptlib.h>
 #include <cryptopp/files.h>
@@ -49,4 +51,16 @@ void rsa_wrapper::load_public_key(std::string filename, CryptoPP::RSA::PublicKey
 	CryptoPP::ByteQueue queue;
 	load(filename, queue);
 	publkey.BERDecodePublicKey(queue, false, queue.MaxRetrievable());
+}
+
+CryptoPP::SecByteBlock rsa_wrapper::sign_data(std::string data, CryptoPP::RSA::PrivateKey privkey) {
+	CryptoPP::RSASSA_PKCS1v15_SHA_Signer signer(privkey);
+	CryptoPP::AutoSeededRandomPool rng;
+	CryptoPP::SecByteBlock signature(signer.SignatureLength());
+	signer.SignMessage(rng, (CryptoPP::byte const*)data.data(), data.size(), signature);
+	CryptoPP::FileSink sink("signed.dat");
+	sink.Put((CryptoPP::byte *const)data.data(), data.size());
+	CryptoPP::FileSink filesig("sig.dat");
+	filesig.Put(signature, signature.size());
+	return signature;
 }
