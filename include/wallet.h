@@ -11,10 +11,7 @@ namespace wallet {
 	int create_wallet(char **argv);
 	int check_parameters(int argc, char **argv, std::string arg);
 	int open(std::string filename);
+	void print_addr(CryptoPP::RSA::PrivateKey privkey); // prints wallet address
 	CryptoPP::RSA::PrivateKey open_wallet(std::string filename);
 }
 
-namespace rsa {
-	std::string generate_private_key();
-	
-}
