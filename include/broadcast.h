@@ -9,6 +9,7 @@ namespace broadcast {
 	int get_peers();
 	int send_chain(bool is_blockchain);
 	int recieve_chain();
+	int send_transaction();
 	int signup_peer();
 	int save_block(nlohmann::json jblock);
 	int check_emergency_mode();

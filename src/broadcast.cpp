@@ -29,18 +29,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <cpr/cpr.h>
 #include <cpr/error.h>
 #include <cpr/api.h>
-//#include <libtorrent/entry.hpp> // Network is basically a Torrent.
-//#include <libtorrent/alert.hpp>
-//#include <libtorrent/fwd.hpp>
-//#include <libtorrent/bencode.hpp>
-//#include <libtorrent/peer_info.hpp>
-//#include <libtorrent/torrent_handle.hpp>
-//#include <libtorrent/session.hpp>
-//#include <libtorrent/torrent_info.hpp>
 #include <nlohmann/json.hpp>
 #include "../include/blockchain.h"
 #include "../include/broadcast.h"
 
+
+/*
+#include <libtorrent/entry.hpp> // Network is basically a Torrent.
+#include <libtorrent/alert.hpp>
+#include <libtorrent/fwd.hpp>
+#include <libtorrent/bencode.hpp>
+#include <libtorrent/peer_info.hpp>
+#include <libtorrent/torrent_handle.hpp>
+#include <libtorrent/session.hpp>
+#include <libtorrent/torrent_info.hpp>
+*/
 
 void broadcast::error_handler(std::string message) {
 	std::cout << "Failed at : " << message << std::endl;
@@ -289,6 +292,10 @@ int broadcast::get_peers() {
 	ofsPeer << j;
 	ifsPeer.close();
 	ofsPeer.close();
+	return 0;
+}
+
+int send_transaction(nlohmann::json jtransaction) {
 	return 0;
 }
 /*

@@ -1,6 +1,8 @@
+#include <sstream>
 #include <iostream>
 #include <cstring>
 #include <fstream>
+#include <nlohmann/json.hpp>
 #include <cryptopp/filters.h>
 #include <cryptopp/cryptlib.h>
 #include <cryptopp/config_int.h>
@@ -22,6 +24,16 @@ bool wallet::is_empty() {
 }
 
 int wallet::create_wallet(char **argv) {
+	std::ifstream ifs("config.json");
+	if(blockchain::is_empty(ifs)) {
+		std::ofstream ofs("config.json");
+		nlohmann::json j;
+		std::string addr;
+		std::cout << "Please specify the Server URL provided :" << std::endl;
+		std::cin >> addr;
+		j["url"] = addr;
+		ofs << j;
+	}
 	CryptoPP::RSA::PrivateKey prikey = rsa_wrapper::generate_private_key();
 	CryptoPP::RSA::PublicKey publkey(prikey);
 	rsa_wrapper::save_public_key("address.bin", publkey);
@@ -46,9 +58,24 @@ int wallet::check_parameters(int argc, char **argv, std::string arg) {
 	return 1; // arg has not been found
 }
 
-void wallet::print_addr(CryptoPP::RSA::PrivateKey privkey) { // prints wallet address
-	CryptoPP::RSA::PublicKey publkey(privkey);
-	std::cout << "Your wallet address is " << "test"<< std::endl; 
+std::string wallet::print_addr() { // prints wallet address
+	std::ifstream ifs("address.bin");
+	std::stringstream ss_addr;
+	ss_addr << ifs.rdbuf();
+	return ss_addr.str();
+}
+
+int wallet::send(char **argv) {
+	nlohmann::json jtransaction;
+	block b("", "");
+	std::string timestamp = b.get_timestamp();
+	std::string sign_data = std::string(argv[3], argv[4]) + timestamp;
+	jtransaction["recieve_addr"] = argv[3];
+	jtransaction["amount"] = argv[4];
+	jtransaction["send_addr"] = print_addr();
+	jtransaction["timestamp"] = timestamp;
+	// having to sign, and broadcast transaction to network
+	return 0;
 }
 
 int wallet::show_help() {
@@ -57,25 +84,34 @@ int wallet::show_help() {
 }
 
 int wallet::init_wallet(int argc, char **argv) {
-	std::string cmd = std::string(argv[2]); // char pointer to operation
+	std::string cmd;
+	try {
+	cmd = std::string(argv[2]); // char pointer to operation
+	} catch(...){
+		cmd.clear();
+
+	}
 	if(argc == 1) {
 		std::cout << "wallet : missing operand\nwallet <file> <argument>\nTry wallet help for more information.";
 		return 1; // all params not satisfied
 	} else if(argc == 2 || argc == 1) {
 		if(!check_parameters(argc, argv, "help")) {
 			show_help();
+			exit(0); // exitting since nothing to do
 		}
 	}
 	path = argv[1]; // changing path to wallet path
-	if(wallet::is_empty()) {
-		wallet::create_wallet(argv);
-	}
 	//Construction area
+	if(cmd == "recieve") {
+		std::cout << "Your address is : \n" << print_addr() << std::endl;
+	} else if(cmd == "generate" && is_empty()) {
+		wallet::create_wallet(argv);
+	} else {
+		show_help();
+		exit(0);
+	}	
 	CryptoPP::RSA::PrivateKey privkey = open_wallet(argv[1]);
 	rsa_wrapper::sign_data("test", privkey);
-	if(cmd == "recieve") {
-		print_addr(privkey);
-	}
 	//Construction area
 	return 0;
 }

@@ -22,7 +22,7 @@ class block {
 		
 		std::string generate_hash(std::string plain_text);	
 		std::string mine_block();
-		std::string get_timestamp();
+	 	std::string get_timestamp();
 		std::string verify_block();
 		int test_block();
 		int add_block();

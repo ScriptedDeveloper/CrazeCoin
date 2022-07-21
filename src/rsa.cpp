@@ -43,13 +43,16 @@ void rsa_wrapper::load(std::string filename, CryptoPP::BufferedTransformation &b
 void rsa_wrapper::save_private_key(std::string filename, CryptoPP::RSA::PrivateKey &privkey) {
 	CryptoPP::ByteQueue queue;
 	privkey.Save(queue);
-	write(filename, queue);
+	CryptoPP::HexEncoder encoder;
+	queue.CopyTo(encoder);
+	queue.MessageEnd();
+	write(filename, queue); 
 }
 
 void rsa_wrapper::save_public_key(std::string filename, CryptoPP::RSA::PublicKey &publkey) {
 	CryptoPP::ByteQueue queue;
 	publkey.Save(queue);
-	write(filename, queue);
+	write(filename, queue); 
 }
 
 void rsa_wrapper::load_private_key(std::string filename, CryptoPP::RSA::PrivateKey &privkey) {
@@ -85,9 +88,11 @@ CryptoPP::SecByteBlock rsa_wrapper::sign_data(std::string data, CryptoPP::RSA::P
 	CryptoPP::AutoSeededRandomPool rng;
 	CryptoPP::SecByteBlock signature(signer.SignatureLength());
 	signer.SignMessage(rng, (CryptoPP::byte const*)data.data(), data.size(), signature);
-	CryptoPP::FileSink sink("signed.dat");
-	sink.Put((CryptoPP::byte *const)data.data(), data.size());
-	CryptoPP::FileSink filesig("sig.dat");
-	filesig.Put(signature, signature.size());
+	CryptoPP::ByteQueue signed_data;
+	CryptoPP::ByteQueue sign_queue;
+	signed_data.Put((CryptoPP::byte *const)data.data(), data.size());
+	sign_queue.Put(signature, signature.size());
+	write("signed.dat", signed_data);
+	write("signature.dat", sign_queue);
 	return signature;
 }
