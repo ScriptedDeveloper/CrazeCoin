@@ -89,7 +89,7 @@ void blockchain::init_blockchain() {
 		std::ofstream ofs(blockchain::path); // clearing blockchain content
 		broadcast::recieve_chain(); // returning to waiting for valid blockchain
 	} else {
-		broadcast::send_chain(true);
+		broadcast::send_chain(true, false);
 	}
 }
 

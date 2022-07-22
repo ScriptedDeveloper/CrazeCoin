@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <nlohmann/json.hpp>
 #include <cryptopp/rsa.h>
 
 
@@ -14,5 +15,6 @@ namespace wallet {
 	int open(std::string filename);
 	std::string print_addr(); // prints wallet address
 	CryptoPP::RSA::PrivateKey open_wallet(std::string filename);
+	int create_transaction_json(nlohmann::json j);
 }
 

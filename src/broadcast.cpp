@@ -192,7 +192,7 @@ int broadcast::recieve_chain() {
 }
 
 
-int broadcast::send_chain(bool is_blockchain) {
+int broadcast::send_chain(bool is_blockchain, bool is_transaction) {
 	struct sockaddr_in sockaddr;
 	int opt = 1, new_socket, server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	nlohmann::json j;
@@ -202,8 +202,11 @@ int broadcast::send_chain(bool is_blockchain) {
 	}
 	if(is_blockchain) {
 		ifs.open(blockchain::path);
-	} else {
+	} else if(!is_blockchain && !is_transaction) {
 		ifs.open("block.json");
+	} else { // is_transaction bool is true, so opening ifs with transaction JSON
+		ifs.open("transaction.json");
+		
 	}
 	try {
 		j = j.parse(ifs);
@@ -212,7 +215,12 @@ int broadcast::send_chain(bool is_blockchain) {
 		exit(1); // parsing block(chain) failed
 	}
 	std::string json_str = j.dump();
-	std::string next_peer = retrieve_pending(0);
+	std::string next_peer;
+	if(!is_transaction){
+		next_peer = retrieve_pending(0); // declaring var only if its a miner
+	} else {
+		next_peer = retrieve_peer(0);
+	}
 	char json_char[1024];
 	int i;
 	for(i = 0; i < json_str.size(); i++) {
@@ -225,22 +233,22 @@ int broadcast::send_chain(bool is_blockchain) {
 	*/
 	if(server_fd == 0) {
 		error_handler("SERVER_FD");
-		send_chain(is_blockchain);
+		send_chain(is_blockchain, is_transaction);
 	}
 	if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) != 0) {
 		error_handler("SETSOCKOPT");
-		send_chain(is_blockchain);
+		send_chain(is_blockchain, is_transaction);
 	}
 	sockaddr.sin_port = htons(PORT);
 	sockaddr.sin_family = AF_INET;
 	sockaddr.sin_addr.s_addr = INADDR_ANY;
 	if(bind(server_fd, (struct sockaddr*)&sockaddr, sizeof(sockaddr)) < 0) {
 		error_handler("BIND");
-		send_chain(is_blockchain);
+		send_chain(is_blockchain, is_transaction);
 	}
 	if(listen(server_fd, 5) < 0) {
 		error_handler("LISTEN");
-		send_chain(is_blockchain);
+		send_chain(is_blockchain, is_transaction);
 	}
 	std::cout << "\nConnecting to peer : " << next_peer << std::endl;
 	socklen_t size = sizeof(sockaddr);
@@ -295,7 +303,13 @@ int broadcast::get_peers() {
 	return 0;
 }
 
-int send_transaction(nlohmann::json jtransaction) {
+int broadcast::send_transaction(nlohmann::json jtransaction) {
+	try {
+		nlohmann::json jtest = jtest.parse(jtransaction);
+	} catch(...) {
+		return 1; // invalid json data, aborting
+	}
+	send_chain(false, true); // broadcasting transaction to network
 	return 0;
 }
 /*

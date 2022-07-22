@@ -7,6 +7,7 @@
 #include <cryptopp/cryptlib.h>
 #include <cryptopp/config_int.h>
 #include <cryptopp/files.h>
+#include "../include/broadcast.h"
 #include "../include/blockchain.h"
 #include "../include/rsa.h"
 #include "../include/wallet.h"
@@ -65,6 +66,15 @@ std::string wallet::print_addr() { // prints wallet address
 	return ss_addr.str();
 }
 
+int wallet::create_transaction_json(nlohmann::json j) { // creates temporary transaction JSON data
+	std::string filename = "transaction.json";
+	std::ofstream ofs(filename);
+	std::ifstream ifs;
+	ofs << j;
+	ofs.close();
+	return 0;
+}
+
 int wallet::send(char **argv) {
 	nlohmann::json jtransaction;
 	block b("", "");
@@ -74,6 +84,9 @@ int wallet::send(char **argv) {
 	jtransaction["amount"] = argv[4];
 	jtransaction["send_addr"] = print_addr();
 	jtransaction["timestamp"] = timestamp;
+	create_transaction_json(jtransaction);
+	// having to sign data, and send
+	broadcast::send_transaction(jtransaction);
 	// having to sign, and broadcast transaction to network
 	return 0;
 }
