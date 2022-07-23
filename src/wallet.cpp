@@ -92,7 +92,7 @@ int wallet::send(char **argv) {
 }
 
 int wallet::show_help() {
-	std::cout << "Usage: wallet <file> <argument> <additional parameters>\nArguments: send - sends coins to a wallet of choice\n generate - generates new wallet to use\nshow - shows wallet address" << std::endl;
+	std::cout << "Usage: wallet <file> <argument> <additional parameters>\nArguments: send - sends coins to a wallet of choice\ngenerate - generates new wallet to use\nshow - shows wallet address" << std::endl;
 	return 0;
 }
 
@@ -115,7 +115,7 @@ int wallet::init_wallet(int argc, char **argv) {
 	}
 	path = argv[1]; // changing path to wallet path
 	//Construction area
-	if(cmd == "recieve") {
+	if(cmd == "show") {
 		std::cout << "Your address is : \n" << print_addr() << std::endl;
 	} else if(cmd == "generate" && is_empty()) {
 		wallet::create_wallet(argv);

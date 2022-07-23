@@ -28,5 +28,9 @@ wallet.out : $(SRC_WALLET)
 run : blockchain.out
 	./$<
 
+wallet : wallet.out
+
+blockchain : blockchain.out
+
 clean : blockchain.out
 	rm -R $^
