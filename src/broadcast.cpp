@@ -29,7 +29,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <cpr/cpr.h>
 #include <cpr/error.h>
 #include <cpr/api.h>
-#include <nlohmann/json.hpp>
 #include "../include/blockchain.h"
 #include "../include/broadcast.h"
 
@@ -303,13 +302,10 @@ int broadcast::get_peers() {
 	return 0;
 }
 
-int broadcast::send_transaction(nlohmann::json jtransaction) {
-	try {
-		nlohmann::json jtest = jtest.parse(jtransaction);
-	} catch(...) {
-		return 1; // invalid json data, aborting
-	}
-	send_chain(false, true); // broadcasting transaction to network
+int broadcast::send_transaction() {
+	if(send_chain(false, true) == 1){ // broadcasting transaction to network
+		return 1; // broadcast failed, aborting
+	} 	
 	return 0;
 }
 /*

@@ -86,7 +86,7 @@ int wallet::send(char **argv) {
 	jtransaction["timestamp"] = timestamp;
 	create_transaction_json(jtransaction);
 	// having to sign data, and send
-	broadcast::send_transaction(jtransaction);
+	broadcast::send_transaction();
 	// having to sign, and broadcast transaction to network
 	return 0;
 }
