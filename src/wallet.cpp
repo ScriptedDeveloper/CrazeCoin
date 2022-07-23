@@ -44,6 +44,10 @@ int wallet::create_wallet(char **argv) {
 
 CryptoPP::RSA::PrivateKey wallet::open_wallet(std::string filename) {
 	std::ifstream ifs(filename);
+	if(blockchain::is_empty(ifs)) {
+		std::cout << "No wallet found. Please generate one.\nExample: ./wallet FILENAME generate" << std::endl;
+		exit(0); // exiting since no wallet has been found.
+	}
 	CryptoPP::RSA::PrivateKey privkey;
 	path = filename; // changing filename local to namespace
 	rsa_wrapper::load_private_key(path, privkey);
