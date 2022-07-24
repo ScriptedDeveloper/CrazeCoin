@@ -14,6 +14,7 @@ namespace blockchain {
 	extern const std::string peer_tracker;
 	static block generate_genesis_block(std::string data);	
 	bool is_blockchain_empty();
+	int verify_transaction(nlohmann::json j);
 	int block_number();
 	int check_chain();
 	void init_blockchain();

@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <chrono>
 #include <string>
 #include <cstdio>
+#include <cryptopp/rsa.h>
 #include <experimental/filesystem>
 #include <nlohmann/json.hpp>
 #include "../include/blockchain.h"
@@ -76,6 +77,11 @@ nlohmann::json blockchain::blockchain_json() {
 	std::ifstream ifschain(blockchain::path);
 	nlohmann::json jchain = jchain.parse(ifschain);
 	return jchain;
+}
+
+int blockchain::verify_transaction(nlohmann::json j) {
+	CryptoPP::RSA::PublicKey publkey;
+	return 0;
 }
 
 void blockchain::init_blockchain() {

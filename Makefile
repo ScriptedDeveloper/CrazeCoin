@@ -32,5 +32,5 @@ wallet : wallet.out
 
 blockchain : blockchain.out
 
-clean : blockchain.out
+clean : blockchain.out wallet.out
 	rm -R $^

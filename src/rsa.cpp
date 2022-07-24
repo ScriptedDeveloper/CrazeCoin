@@ -88,11 +88,10 @@ CryptoPP::SecByteBlock rsa_wrapper::sign_data(std::string data, CryptoPP::RSA::P
 	CryptoPP::AutoSeededRandomPool rng;
 	CryptoPP::SecByteBlock signature(signer.SignatureLength());
 	signer.SignMessage(rng, (CryptoPP::byte const*)data.data(), data.size(), signature);
-	CryptoPP::ByteQueue signed_data;
+	CryptoPP::FileSink signed_data("signed.dat");
 	CryptoPP::ByteQueue sign_queue;
 	signed_data.Put((CryptoPP::byte *const)data.data(), data.size());
 	sign_queue.Put(signature, signature.size());
-	write("signed.dat", signed_data);
 	write("signature.dat", sign_queue);
 	return signature;
 }
