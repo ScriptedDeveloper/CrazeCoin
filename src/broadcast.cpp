@@ -215,8 +215,8 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction) {
 	}
 	std::string json_str = j.dump();
 	std::string next_peer;
-	if(!is_transaction){
-		next_peer = retrieve_pending(0); // declaring var only if its a miner
+	if(!is_transaction && is_blockchain){
+		next_peer = retrieve_pending(0); // declaring var only if its a miner broadcasting blockchain
 	} else {
 		next_peer = retrieve_peer(0);
 	}
