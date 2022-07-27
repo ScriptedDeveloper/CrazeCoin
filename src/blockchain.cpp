@@ -21,10 +21,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstdio>
 #include <cryptopp/rsa.h>
 #include <experimental/filesystem>
+#include <cryptopp/filters.h>
+#include <cryptopp/pssr.h>
 #include <nlohmann/json.hpp>
+#include <vector>
 #include "../include/blockchain.h"
 //#include <libtorrent/torrent_handle.hpp>
 #include "../include/block.h"
+#include "../include/rsa.h"
 #include "../include/broadcast.h"
 
 namespace blockchain {
@@ -73,6 +77,8 @@ int blockchain::block_number() {
 	return jchain["blocks"];
 }
 
+
+
 nlohmann::json blockchain::blockchain_json() {
 	std::ifstream ifschain(blockchain::path);
 	nlohmann::json jchain = jchain.parse(ifschain);
@@ -81,7 +87,17 @@ nlohmann::json blockchain::blockchain_json() {
 
 int blockchain::verify_transaction(nlohmann::json j) {
 	CryptoPP::RSA::PublicKey publkey;
-	return 0;
+	std::vector<std::string> raw_vector, hex_vector = {"signature", "send_addr"};
+	std::string timestamp = j["timestamp"], amount = j["amount"] , reciever = j["recieve_addr"]; // JSON dump function acting weird
+	for(int i = 0; i < hex_vector.size(); i++) {
+		raw_vector.push_back(rsa_wrapper::raw_hex_decode(j[hex_vector[i]]));
+	}
+	CryptoPP::StringSource ss(raw_vector[1], true);
+	publkey.Load(ss); // loads sender's address (public key) to variable
+	std::string data = reciever + "/" + amount + "/" + timestamp;
+	CryptoPP::RSASSA_PKCS1v15_SHA_Verifier verifier(publkey);
+	bool verify_trans = verifier.VerifyMessage((const CryptoPP::byte*)data.c_str(), data.length(), (const CryptoPP::byte*)raw_vector[0].c_str(), raw_vector[0].size());
+	return (int)verify_trans;
 }
 
 void blockchain::init_blockchain() {
@@ -126,3 +142,27 @@ void blockchain::check_files () {
 }
 
 
+/* might be useful for later
+int blockchain::check_transaction_format(std::string format, nlohmann::json j) { // parses string to check for values
+	std::vector<std::string> vector_format;
+	std::string current_member; // specifies member of vector, e.g amount
+	for(int i = 0; format[i] != '/'; i++) {
+		current_member += format[i];
+		format.erase(0, 1);
+	}
+	format.erase(0, 1); // erasing backslash
+	vector_format.push_back(current_member);
+	current_member.clear();
+	if(!format.empty()) {
+		check_transaction_format(format, j); // parsing remaining members
+	}
+	for(std::string member : vector_format) {
+		for(std::string j_member : j) {
+			if(j_member != member) {
+				return 1; // invalid data sent to miner, aborting
+			}
+		}
+	}
+	return 0;
+}
+*/

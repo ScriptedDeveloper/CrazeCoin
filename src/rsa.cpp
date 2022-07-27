@@ -1,4 +1,6 @@
 // written with Crypto++ wiki
+#include <cryptopp/filters.h>
+#include <cstdint>
 #include <iostream>
 #include <cryptopp/config_int.h>
 #include <cryptopp/queue.h>
@@ -38,6 +40,19 @@ void rsa_wrapper::load(std::string filename, CryptoPP::BufferedTransformation &b
 	decoder.MessageEnd();
 	decoder.CopyTo(bt);
 	bt.MessageEnd();
+}
+
+std::string rsa_wrapper::raw_hex_decode(std::string hex_str) { // decodes hex signature from stringsource to raw
+	CryptoPP::HexDecoder decoder;
+	std::string decoded_str;
+	decoder.Put((CryptoPP::byte*)hex_str.data(), hex_str.size());
+	decoder.MessageEnd();
+	CryptoPP::word64 size = decoder.MaxRetrievable();
+	if(size <= SIZE_MAX && size) {
+		decoded_str.resize(size);
+		decoder.Get((CryptoPP::byte *)&decoded_str[0], decoded_str.size());
+	}
+	return decoded_str;
 }
 
 void rsa_wrapper::save_private_key(std::string filename, CryptoPP::RSA::PrivateKey &privkey) {
@@ -92,6 +107,7 @@ CryptoPP::SecByteBlock rsa_wrapper::sign_data(std::string data, CryptoPP::RSA::P
 	CryptoPP::ByteQueue sign_queue;
 	signed_data.Put((CryptoPP::byte *const)data.data(), data.size());
 	sign_queue.Put(signature, signature.size());
+	size_t size = signer.MaxSignatureLength();
 	write("signature.dat", sign_queue);
 	return signature;
 }

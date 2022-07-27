@@ -1,8 +1,9 @@
-#include <sstream>
 #include <iostream>
-#include <cstring>
+#include <sstream>
 #include <fstream>
+#include <cstring>
 #include <nlohmann/json.hpp>
+#include <cryptopp/secblockfwd.h>
 #include <cryptopp/filters.h>
 #include <cryptopp/cryptlib.h>
 #include <cryptopp/config_int.h>
@@ -84,7 +85,7 @@ int wallet::send(char **argv) {
 	CryptoPP::RSA::PrivateKey privkey;
 	block b("", "");
 	std::string timestamp = b.get_timestamp();
-	std::string sign_data = std::string(argv[3], argv[4]) + timestamp;
+	std::string sign_data = std::string(argv[3]) + "/" + std::string(argv[4]) + "/" + timestamp;
 	jtransaction["recieve_addr"] = argv[3];
 	jtransaction["amount"] = argv[4];
 	jtransaction["send_addr"] = print_addr();
@@ -92,7 +93,13 @@ int wallet::send(char **argv) {
 	rsa_wrapper::load_private_key(path, privkey);
 	create_transaction_json(jtransaction);
 	// having to sign data, and send
-	rsa_wrapper::sign_data(jtransaction.dump(), privkey);
+	std::ifstream ifs_signature;
+	std::stringstream ss_signature;
+	CryptoPP::SecByteBlock signature = rsa_wrapper::sign_data(sign_data, privkey);
+	ifs_signature = std::ifstream("signature.dat");
+	ss_signature << ifs_signature.rdbuf();
+	jtransaction["signature_len"] = signature.size();
+	jtransaction["signature"] = ss_signature.str(); // reading signature from file, parsing it into stringbuffer and turning it into string
 	// broadcast::send_transaction();
 	// having to sign, and broadcast transaction to network
 	return 0;

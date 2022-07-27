@@ -13,6 +13,7 @@ namespace rsa_wrapper {
 	void load_private_key(std::string filename, CryptoPP::RSA::PrivateKey &privkey);
 	void load(std::string filename, CryptoPP::BufferedTransformation &bt);
 	void load_public_key(std::string filename, CryptoPP::RSA::PublicKey &publkey);
+	std::string raw_hex_decode(std::string hex_str);
 	CryptoPP::SecByteBlock sign_data(std::string data, CryptoPP::RSA::PrivateKey);
 	std::string hex_encode(CryptoPP::SecByteBlock signature);
 }
