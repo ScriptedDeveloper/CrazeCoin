@@ -17,6 +17,7 @@ namespace blockchain {
 	int verify_transaction(nlohmann::json j);
 	int block_number();
 	int check_chain();
+	int add_transaction(nlohmann::json jtransaction);
 	void init_blockchain();
 	void create_json(std::string name);
 	bool is_empty(std::ifstream &ifS);

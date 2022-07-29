@@ -105,13 +105,12 @@ void blockchain::init_blockchain() {
  		broadcast::clear_peers(); // clearing only if server is available
 		broadcast::get_peers(); // Connecting to other peers
 	}
-	if(blockchain::is_blockchain_empty()) {
-		broadcast::recieve_chain();
-	} else if(blockchain::check_chain() == 1) {
-		std::ofstream ofs(blockchain::path); // clearing blockchain content
-		broadcast::recieve_chain(); // returning to waiting for valid blockchain
+	if(blockchain::is_blockchain_empty() || blockchain::check_chain() == 1) { // checks also if blockchain is valid
+		std::ofstream ofs(blockchain::path); // clearing blockchain content in case check_chain == 1
+		broadcast::recieve_chain(false);
 	} else {
-		broadcast::send_chain(true, false);
+		//broadcast::send_chain(true, false); // is original peer/miner, broadcasting blockchain
+		broadcast::recieve_chain(true); // changing for debugging
 	}
 }
 
@@ -141,6 +140,14 @@ void blockchain::check_files () {
 	ifsPeer.close();
 }
 
+
+int blockchain::add_transaction(nlohmann::json jtransaction) {
+	if(verify_transaction(jtransaction) == 1) {
+		return 1; // verifying transaction failed
+	}
+
+	return 0;
+}
 
 /* might be useful for later
 int blockchain::check_transaction_format(std::string format, nlohmann::json j) { // parses string to check for values
