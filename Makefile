@@ -1,6 +1,7 @@
 # Prototype for now
-
-all : wallet.out blockchain.out
+SRC = $(wildcard src/*.cpp)
+OBJ = $(patsubst src/%.cpp, build/%.o, $(SRC))
+all: $(OBJ) blockchain.out wallet.out
 override CC		      := g++
 CFLAGS			      += -lssl
 CFLAGS			      += -lcrypto
@@ -10,37 +11,25 @@ CFLAGS			      += --std=c++17
 CFLAGS		              += -g
 CFLAGS			      += -lcpr
 
-SRC                           := $(wildcard src/*.cpp)
 SRC_BLOCKCHAIN		      := apps/blockchain.cpp
 SRC_WALLET		      := apps/wallet.cpp
 
+blockchain.out: $(OBJ)
+	$(CC) apps/blockchain.cpp build/* $(CFLAGS) -o blockchain.out 
 
-blockchain.out: $(SRC) $(SRC_BLOCKCHAIN)
-	$(CC) $(SRC_BLOCKCHAIN) build/* $(CFLAGS) -o blockchain.out 
-
-wallet.out: $(SRC) $(SRC_WALLET)
-	$(CC) $(SRC_WALLET) build/* $(CFLAGS) -o wallet.out
+wallet.out: $(OBJ)
+	$(CC) apps/wallet.cpp build/* $(CFLAGS) -o wallet.out
 
 run : blockchain.out
 	./$<
 
-move : objects
-	mv $(wildcard *.o) build
-
-objects : $(SRC)
-	$(CC) -c $(SRC) $(CFLAGS)
-
-wallet : wallet.out
-
-blockchain : blockchain.out
+build/%.o: src/%.cpp
+	$(CC) $(CFLAGS) -c $<
+	mv *.o build/
 
 clean:
-ifneq (,$(wildcard blockchain.out))
-	rm -R blockchain.out
+	rm -R *.out
 	rm -R build/*
-else ifneq (,$(wildcard wallet.out))
-	rm -R wallet.out
-	rm -R build/*
-endif
 
 .PHONY: clean
+
