@@ -37,9 +37,10 @@ blockchain : blockchain.out
 clean:
 ifneq (,$(wildcard blockchain.out))
 	rm -R blockchain.out
+	rm -R build/*
 else ifneq (,$(wildcard wallet.out))
 	rm -R wallet.out
-endif
 	rm -R build/*
+endif
 
 .PHONY: clean
