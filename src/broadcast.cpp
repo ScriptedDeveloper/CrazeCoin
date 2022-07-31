@@ -134,6 +134,16 @@ int broadcast::save_block(nlohmann::json jblock) {
 	return 0;
 }
 
+nlohmann::json broadcast::raw_to_json(char raw[]){
+	nlohmann::json j_data;
+	try{
+		j_data = j_data.parse(raw);
+	} catch(...) {
+		return 1; // parsing failed, char array is not valid JSON
+	}
+	return j_data;
+}
+
 
 int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable for miners to verify transaction and append to blockchain
 	struct sockaddr_in sockaddr;
@@ -169,6 +179,9 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 	std::cout << "Waiting for blockchain..." << std::endl;
 	read(isocket, buff, 1024);
 	buff[strlen(buff)] = '\0';
+	if(is_transaction) {
+		blockchain::add_transaction(raw_to_json(buff)); // attempting to add transaction
+	}
 	ifsblock.open(blockchain::path);
 	if(blockchain::is_empty(ifsblock)) {
 		ifsblock.close();

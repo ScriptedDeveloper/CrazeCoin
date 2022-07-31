@@ -1,7 +1,7 @@
 # Prototype for now
 SRC = $(wildcard src/*.cpp)
 OBJ = $(patsubst src/%.cpp, build/%.o, $(SRC))
-all: $(OBJ) blockchain.out wallet.out
+all: blockchain.out wallet.out
 override CC		      := g++
 CFLAGS			      += -lssl
 CFLAGS			      += -lcrypto
@@ -14,18 +14,17 @@ CFLAGS			      += -lcpr
 SRC_BLOCKCHAIN		      := apps/blockchain.cpp
 SRC_WALLET		      := apps/wallet.cpp
 
-blockchain.out: $(OBJ)
+blockchain.out: $(SRC_BLOCKCHAIN) $(OBJ)
 	$(CC) apps/blockchain.cpp build/* $(CFLAGS) -o blockchain.out 
 
-wallet.out: $(OBJ)
+wallet.out: $(SRC_WALLET) $(OBJ)
 	$(CC) apps/wallet.cpp build/* $(CFLAGS) -o wallet.out
 
 run : blockchain.out
 	./$<
 
 build/%.o: src/%.cpp
-	$(CC) $(CFLAGS) -c $<
-	mv *.o build/
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -R *.out

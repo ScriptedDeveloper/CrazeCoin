@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <iostream>
 #include <fstream>
 #include <ios>
+#include <cctype>
 #include <chrono>
 #include <string>
 #include <cstdio>
@@ -26,7 +27,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <nlohmann/json.hpp>
 #include <vector>
 #include "../include/blockchain.h"
-//#include <libtorrent/torrent_handle.hpp>
 #include "../include/block.h"
 #include "../include/rsa.h"
 #include "../include/broadcast.h"
@@ -77,7 +77,27 @@ int blockchain::block_number() {
 	return jchain["blocks"];
 }
 
-
+int blockchain::check_balances(std::string addr) {
+	// * enter complex algorithm here to check for balances inside blockchain * 
+	std::ifstream ifschain(path);
+	nlohmann::json jchain = jchain.parse(ifschain);
+	int blocks = block_number() + 1;
+	int balance = -1; // balance of wallet
+	for(int i = 1; i < blocks; i++) {
+		std::string str_i = std::to_string(i);
+		if(jchain[str_i]["recieve_addr"] == addr) {
+			balance = jchain[str_i]["amount"];
+		}  else if(jchain[str_i]["send_addr"] == addr && balance == -1) {
+			std::cout << "[SYSTEM] Error! Blockchain is invalid! Address " << addr << " is sending coins without having coins!" << std::endl;
+			exit(1); // balance is not initialized, blockchain is corrupted!
+		} else if(jchain[str_i]["send_addr"] == addr) {
+			balance = balance - (int)jchain[str_i]["amount"];
+		}	
+	
+		// having to check for balance of wallet
+	}
+	return balance;
+}
 
 nlohmann::json blockchain::blockchain_json() {
 	std::ifstream ifschain(blockchain::path);
@@ -145,7 +165,7 @@ int blockchain::add_transaction(nlohmann::json jtransaction) {
 	if(verify_transaction(jtransaction) == 1) {
 		return 1; // verifying transaction failed
 	}
-
+	
 	return 0;
 }
 
