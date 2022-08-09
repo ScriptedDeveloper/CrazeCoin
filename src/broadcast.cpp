@@ -31,18 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <cpr/api.h>
 #include "../include/blockchain.h"
 #include "../include/broadcast.h"
-
-
-/*
-#include <libtorrent/entry.hpp> // Network is basically a Torrent.
-#include <libtorrent/alert.hpp>
-#include <libtorrent/fwd.hpp>
-#include <libtorrent/bencode.hpp>
-#include <libtorrent/peer_info.hpp>
-#include <libtorrent/torrent_handle.hpp>
-#include <libtorrent/session.hpp>
-#include <libtorrent/torrent_info.hpp>
-*/
+#include "../include/blockchain.h"
 
 void broadcast::error_handler(std::string message) {
 	std::cout << "Failed at : " << message << std::endl;
@@ -101,11 +90,9 @@ int broadcast::check_emergency_mode() {
 }
 
 int broadcast::check_block(nlohmann::json jblock) {
-	std::string prev_hash = jblock["previous_hash"];
-	block b(prev_hash, jblock["data"]);
+	block b(jblock["previous_hash"], jblock["recieve_addr"], jblock["send_addr"], jblock["amount"], false);
 	b.timestamp = jblock["timestamp"];
 	b.nounce = jblock["nounce"];
-	b.data = jblock["data"];
 	if(b.verify_block() != jblock["hash"]) {
 		return 1; // block is invalid and has been rejected
 	}
@@ -115,6 +102,7 @@ int broadcast::check_block(nlohmann::json jblock) {
 int broadcast::save_block(nlohmann::json jblock) {
 	std::ofstream ofchain;
 	std::ifstream ifschain(blockchain::path);
+	block b(jblock["previous_hash"], jblock["recieve_addr"], jblock["send_addr"], jblock["amount"], false);
 	if(check_block(jblock) != 0) {
 		return 1; // block is invalid
 	}
@@ -136,8 +124,12 @@ int broadcast::save_block(nlohmann::json jblock) {
 
 nlohmann::json broadcast::raw_to_json(char raw[]){
 	nlohmann::json j_data;
-	try{
+	try {	
+		std::ofstream ofs("test");
+		ofs << raw;
+		ofs.close();
 		j_data = j_data.parse(raw);
+	
 	} catch(...) {
 		return 1; // parsing failed, char array is not valid JSON
 	}
@@ -207,37 +199,39 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 int broadcast::send_chain(bool is_blockchain, bool is_transaction) {
 	struct sockaddr_in sockaddr;
 	int opt = 1, new_socket, server_fd = socket(AF_INET, SOCK_STREAM, 0);
-	nlohmann::json j;
+	std::string filename; // getting filename to reopen after JSON parse function closes file
 	std::ifstream ifs;
-	if(broadcast::check_emergency_mode() == -1) {
+	if(broadcast::check_emergency_mode() == -1 && !is_transaction) {
 		broadcast::fail_emergency_mode(); // same as recieve_chain
 	}
 	if(is_blockchain) {
-		ifs.open(blockchain::path);
+		filename = blockchain::path;
+		ifs.open(filename);
 	} else if(!is_blockchain && !is_transaction) {
-		ifs.open("block.json");
+		filename = "block.json";
+		ifs.open(filename);
 	} else { // is_transaction bool is true, so opening ifs with transaction JSON
-		ifs.open("transaction.json");
+		filename = "transaction.json";
+		ifs.open(filename);
 	}
 	try {
-		j = j.parse(ifs);
+		nlohmann::json j;
+		j = j.parse(ifs); // checking if is valid json
 	} catch(...) {
 		std::cout << ifs.rdbuf();
 		exit(1); // parsing block(chain) failed
 	}
-	std::string json_str = j.dump();
+	std::ifstream ifs_obj(filename);
+	std::stringstream ss_chain;
+	ss_chain << ifs_obj.rdbuf(); // putting transaction into raw stringstream format since nlohmann::json::dump is behaving incorrectly
+	std::string json_str = ss_chain.str();
 	std::string next_peer;
 	if(!is_transaction && is_blockchain){
 		next_peer = retrieve_pending(0); // declaring var only if its a miner broadcasting blockchain
 	} else {
 		next_peer = retrieve_peer(0);
 	}
-	char json_char[1024];
-	int i;
-	for(i = 0; i < json_str.size(); i++) {
-		json_char[i] = json_str[i];
-	}
-	json_char[i+1] = '\0';
+	const char *json_char = json_str.c_str();
 	/*if(check_node(retrieve_peer(0)) == 1) { Thanks to ISP only 1 IP for all devices!
 		next_peer = retrieve_peer(1);
 	}
@@ -266,7 +260,7 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction) {
 	if((new_socket = accept(server_fd, (struct sockaddr*)&sockaddr, &size)) < 0) {
 		error_handler("ACCEPT");
 	} 
-	if (send(new_socket, json_char, strlen(json_char), 0) == -1) {
+	if (send(new_socket, json_char, strnlen(json_char, json_str.size()), 0) == -1) { // * strnlen function causes issues since not sending correct data * 
 		error_handler("SEND");
 	}
 	close(new_socket);
@@ -282,7 +276,7 @@ int broadcast::signup_peer() {
 	} else {
 		rpeer_server = cpr::Get(cpr::Url{blockchain::peer_tracker + "/add_peer"}, cpr::Timeout{20000});
 	}
-	if(rpeer_server.status_code != 200) {
+	if(rpeer_server.status_code != 200 && rpeer_server.status_code != 203) {
 		return 1; // signing up failed, emergency mode engaged soon!
 	}
 	ifs.close();
@@ -291,20 +285,34 @@ int broadcast::signup_peer() {
 
 int broadcast::get_peers() {
 	std::ifstream ifsPeer(blockchain::peer_path);
-	nlohmann::json jpeers, jpending, j = j.parse(ifsPeer);
-	cpr::Response rpeer, rpending;
-	int st_peer = rpeer.status_code, st_pend = rpending.status_code;
-	std::string txt_peer = rpeer.text, txt_pending = rpending.text;
-	sleep(2); // crashing purposes
-	while(st_peer != 200 && st_pend != 200 && txt_peer.empty()) { // checking in case the list of peers/pending peers are empty
-		rpeer = cpr::Get(cpr::Url{blockchain::peer_tracker + "/get_peers"});
-		rpending = cpr::Get(cpr::Url{blockchain::peer_tracker + "/pending_peers"}); // retrieving pending peers
-		txt_peer = rpeer.text;
-		txt_pending = rpending.text;
-		sleep(2); // avoiding too much traffic
+	nlohmann::json jpeers, jpending, j;	
+	cpr::Response rpeer, rpending, ramount;
+	//std::string txt_peer, txt_pending;
+	std::vector<std::string> text_vec(3); // 0 = peers ips, 1 = pending ips, 2 = amount of peers
+	std::vector<cpr::Response> response_vec(3); // same as above
+	std::cout << "[SYSTEM] Connecting to peer server.." << std::endl;
+	int retrieves = 0; // after 3 retries opting to emergency mode
+	do {
+		if(retrieves == 3) {
+			break; // max retries already
+		} else if(retrieves >= 1) {
+			sleep(2); // wait a little time before retrying..
+		}
+		retrieves++;
+		response_vec[0] = cpr::Get(cpr::Url{blockchain::peer_tracker + "/get_peers"}); // issue somewhere in here at wallet
+		response_vec[1] = cpr::Get(cpr::Url{blockchain::peer_tracker + "/pending_peers"}); // retrieving pending peers
+		response_vec[2] = cpr::Get(cpr::Url{blockchain::peer_tracker + "/peers"});
+		for(int i = 0; i < 2; i++) {
+			text_vec[i] = response_vec[i].text; // assigning all response texts to other vector
+		}
+		/// add here a thread to recieve_chain to accept transactions
+	} while(response_vec[0].status_code != 200 || response_vec[2].status_code != 200 || text_vec[0] == "{}" || text_vec[2] == "1"); // checking in case the list of peers/pending peers are empty
+	if(retrieves >= 3) {
+		std::cout << "[SYSTEM] Connecting to peer server failed! Opting to emergency mode..." << std::endl;
+		return 1;
 	}
-	jpeers = jpeers.parse(txt_peer);
-	jpending = jpending.parse(txt_pending);
+	jpeers = jpeers.parse(text_vec[0]);
+	jpending = jpending.parse(text_vec[1]);
 	j["peers"] = jpeers;
 	j["pending_peers"] = jpending;
 	std::ofstream ofsPeer(blockchain::peer_path);

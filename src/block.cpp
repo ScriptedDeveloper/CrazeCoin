@@ -26,11 +26,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "../include/broadcast.h"
 #include "../include/block.h"
 
-block::block(std::string previous_hash, std::string data){
+block::block(std::string previous_hash, std::string recieve_addr, std::string send_addr, int amount, bool genesis){
 	this->previous_hash = previous_hash;
-	this->data = data;
 	this->nounce = 0;
 	this->difficulty = 4; // for now
+	this->recieve_addr = recieve_addr;
+	this->send_addr = send_addr;
+	this->amount = amount;
+	this->genesis = genesis;
 }
 
 std::string block::generate_hash(std::string plain_text) {
@@ -81,9 +84,11 @@ nlohmann::json block::set_data(nlohmann::json j, std::string index_str) {
 	}
 	j[index_str]["timestamp"] = this->timestamp;
 	j[index_str]["hash"] = this->hash;
-	j[index_str]["data"] = this->data;
+	j[index_str]["send_addr"] = this->send_addr;
+	j[index_str]["recieve_addr"] = this->recieve_addr.c_str(); // imposter
 	j[index_str]["previous_hash"] = this->previous_hash;
 	j[index_str]["difficulty"] = this->difficulty;
+	j[index_str]["amount"] = this->amount;
 	j[index_str]["nounce"] = this->nounce; // adding nounce for other miners to check chain
 	this->nounce = 0; // clearing nounce for next block
 	if(this->merkle_root.empty()) {
@@ -99,7 +104,7 @@ nlohmann::json block::set_data(nlohmann::json j, std::string index_str) {
 
 int block::add_block(){ // issue is that json is not correct
 	nlohmann::json j, j_new;
-	if(this->data.empty() || this->previous_hash.empty()) {
+	if(this->previous_hash.empty() && !this->genesis) {
 		return 1; // block data is not initialized
 	}
 	if(blockchain::is_blockchain_empty()) {
@@ -107,6 +112,7 @@ int block::add_block(){ // issue is that json is not correct
 	} else {
 		this->index = blockchain::block_number();
 		j = blockchain::blockchain_json();
+		
 	}
 	this->index++;
 	std::string index_str = std::to_string(this->index);

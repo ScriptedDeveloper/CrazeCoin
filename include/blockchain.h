@@ -2,19 +2,16 @@
 #ifndef __unix__
 	#error "UNIX ONLY, WINDOWS NOT SUPPORTED!"
 #endif
-#include <iostream>
-#include <fstream>
-#include <experimental/filesystem>
 #include "block.h"
 
 namespace blockchain {
-	extern std::string torrent_file; // The BitTorrent Protocol is used for Peer Discovery
-	extern std::string path;
-	extern std::string peer_path;
+	extern const std::string path;
+	extern const std::string peer_path;
 	extern const std::string peer_tracker;
-	static block generate_genesis_block(std::string data);	
+	block generate_genesis_block();	
+	std::string retrieve_addr();
 	bool is_blockchain_empty();
-	int verify_transaction(nlohmann::json j);
+	bool verify_transaction(nlohmann::json j);
 	int block_number();
 	int check_chain();
 	int add_transaction(nlohmann::json jtransaction);

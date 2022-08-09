@@ -83,15 +83,13 @@ int wallet::create_transaction_json(nlohmann::json j) { // creates temporary tra
 int wallet::send(char **argv) {
 	nlohmann::json jtransaction;
 	CryptoPP::RSA::PrivateKey privkey;
-	block b("", "");
-	std::string timestamp = b.get_timestamp();
+	std::string timestamp = block::get_timestamp();
 	std::string sign_data = std::string(argv[3]) + "/" + std::string(argv[4]) + "/" + timestamp;
 	jtransaction["recieve_addr"] = argv[3];
 	jtransaction["amount"] = argv[4];
 	jtransaction["send_addr"] = print_addr();
 	jtransaction["timestamp"] = timestamp;
 	rsa_wrapper::load_private_key(path, privkey);
-	create_transaction_json(jtransaction);
 	// having to sign data, and send
 	std::ifstream ifs_signature;
 	std::stringstream ss_signature;
@@ -100,7 +98,8 @@ int wallet::send(char **argv) {
 	ss_signature << ifs_signature.rdbuf();
 	jtransaction["signature_len"] = signature.size();
 	jtransaction["signature"] = ss_signature.str(); // reading signature from file, parsing it into stringbuffer and turning it into string
-	// broadcast::send_transaction();
+	create_transaction_json(jtransaction);
+	 broadcast::send_transaction();
 	// having to sign, and broadcast transaction to network
 	return 0;
 }

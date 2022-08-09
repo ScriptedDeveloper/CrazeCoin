@@ -32,21 +32,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "../include/broadcast.h"
 
 namespace blockchain {
-	std::string path = std::experimental::filesystem::current_path().u8string() + "/blockchain.json";
-	std::string torrent_file = std::experimental::filesystem::current_path().u8string() + "/discovery.torrent";
-	std::string peer_path = std::experimental::filesystem::current_path().u8string() + "/peers.json";
-	const std::string peer_tracker = "192.168.10.104:6882"; // changing later to correct domain
+	const std::string path = std::experimental::filesystem::current_path().u8string() + "/blockchain.json";
+	const std::string peer_path = std::experimental::filesystem::current_path().u8string() + "/peers.json";
+	const std::string addr_path = std::experimental::filesystem::current_path().u8string() + "/address.bin";
+	const std::string peer_tracker = "192.168.10.103:6882"; // changing later to correct domain
 }
 
 bool blockchain::is_empty(std::ifstream &ifS) {
 	return ifS.peek() == std::ifstream::traits_type::eof();
 }
 
-block blockchain::generate_genesis_block(std::string data) {
-	block b("0", data);
-	b.index = 0;
+block blockchain::generate_genesis_block() {
+	block b("0", retrieve_addr(), "0", 20, true); // 20 coins will be sent to miner's wallet
 	b.add_block();
 	return b;
+}
+
+std::string blockchain::retrieve_addr() {
+	std::ifstream ifs(addr_path);
+	std::stringstream ss_addr;
+	ss_addr << ifs.rdbuf();
+	return ss_addr.str();
 }
 
 bool blockchain::is_blockchain_empty() {
@@ -78,7 +84,6 @@ int blockchain::block_number() {
 }
 
 int blockchain::check_balances(std::string addr) {
-	// * enter complex algorithm here to check for balances inside blockchain * 
 	std::ifstream ifschain(path);
 	nlohmann::json jchain = jchain.parse(ifschain);
 	int blocks = block_number() + 1;
@@ -93,8 +98,6 @@ int blockchain::check_balances(std::string addr) {
 		} else if(jchain[str_i]["send_addr"] == addr) {
 			balance = balance - (int)jchain[str_i]["amount"];
 		}	
-	
-		// having to check for balance of wallet
 	}
 	return balance;
 }
@@ -105,10 +108,13 @@ nlohmann::json blockchain::blockchain_json() {
 	return jchain;
 }
 
-int blockchain::verify_transaction(nlohmann::json j) {
+bool blockchain::verify_transaction(nlohmann::json j) {
 	CryptoPP::RSA::PublicKey publkey;
 	std::vector<std::string> raw_vector, hex_vector = {"signature", "send_addr"};
-	std::string timestamp = j["timestamp"], amount = j["amount"] , reciever = j["recieve_addr"]; // JSON dump function acting weird
+	std::string timestamp = std::to_string((int)j["timestamp"]);
+	std::string amount = j["amount"];
+	std::string reciever = j["recieve_addr"];
+	//std::string timestamp = std::to_string((int)j["timestamp"]), amount = std::to_string((int)j["amount"]) , reciever = j["recieve_addr"]; // JSON dump function acting weird
 	for(int i = 0; i < hex_vector.size(); i++) {
 		raw_vector.push_back(rsa_wrapper::raw_hex_decode(j[hex_vector[i]]));
 	}
@@ -117,12 +123,15 @@ int blockchain::verify_transaction(nlohmann::json j) {
 	std::string data = reciever + "/" + amount + "/" + timestamp;
 	CryptoPP::RSASSA_PKCS1v15_SHA_Verifier verifier(publkey);
 	bool verify_trans = verifier.VerifyMessage((const CryptoPP::byte*)data.c_str(), data.length(), (const CryptoPP::byte*)raw_vector[0].c_str(), raw_vector[0].size());
-	return (int)verify_trans;
+	if(verify_trans) {
+		return check_balances(j["send_addr"]);
+	}
+	return verify_trans;
 }
 
 void blockchain::init_blockchain() {
+	generate_genesis_block();
 	if(broadcast::signup_peer() == 0) { // if server doesnt respond, skip
- 		broadcast::clear_peers(); // clearing only if server is available
 		broadcast::get_peers(); // Connecting to other peers
 	}
 	if(blockchain::is_blockchain_empty() || blockchain::check_chain() == 1) { // checks also if blockchain is valid
@@ -141,7 +150,7 @@ void blockchain::create_json(std::string name) {
 }
 
 void blockchain::check_files () {
-	std::ifstream ifsPeer(blockchain::peer_path);
+	std::ifstream ifsaddr(addr_path), ifsPeer(peer_path);
 	if(blockchain::is_empty(ifsPeer)) {
 		std::cout << "\n Peer required files not found, creating..." << std::endl;
 		broadcast::clear_peers();
@@ -157,12 +166,19 @@ void blockchain::check_files () {
 		std::remove(blockchain::peer_path.c_str());
 		check_files();
 	}
+	if(is_empty(ifsaddr)) {
+		std::ofstream ofsaddr(addr_path);
+		std::string addr;
+		std::cout << "Seems like you are new here. Please input your wallet address : " << std::endl;
+		std::cin >> addr;
+		ofsaddr << addr;
+		ofsaddr.close();
+	}
 	ifsPeer.close();
 }
 
-
 int blockchain::add_transaction(nlohmann::json jtransaction) {
-	if(verify_transaction(jtransaction) == 1) {
+	if(!verify_transaction(jtransaction)) {
 		return 1; // verifying transaction failed
 	}
 	
