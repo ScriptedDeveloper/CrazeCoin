@@ -14,7 +14,7 @@ namespace broadcast {
 	int save_block(nlohmann::json jblock);
 	int check_emergency_mode();
 	int peers_empty();
-	nlohmann::json raw_to_json(char raw[]);
+	nlohmann::json raw_to_json(std::string raw);
 	void clear_peers();
 	void error_handler(std::string message);
 	void fail_emergency_mode();

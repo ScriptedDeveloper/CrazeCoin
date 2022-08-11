@@ -122,12 +122,9 @@ int broadcast::save_block(nlohmann::json jblock) {
 	return 0;
 }
 
-nlohmann::json broadcast::raw_to_json(char raw[]){
+nlohmann::json broadcast::raw_to_json(std::string raw){
 	nlohmann::json j_data;
 	try {	
-		std::ofstream ofs("test");
-		ofs << raw;
-		ofs.close();
 		j_data = j_data.parse(raw);
 	
 	} catch(...) {
@@ -136,62 +133,68 @@ nlohmann::json broadcast::raw_to_json(char raw[]){
 	return j_data;
 }
 
-
 int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable for miners to verify transaction and append to blockchain
+	bool failed = false;	
 	struct sockaddr_in sockaddr;
 	int isocket, client_fd;
  	isocket = socket(AF_INET, SOCK_STREAM, 0);
 	int optional, inet;
-	char buff[1024] = {0}; // recieving blockchain
+	size_t buff_size;
+	char buff[1024]; // recieving blockchain
 	std::ofstream ofsBlock;
 	std::ifstream ifsblock;
-	if(broadcast::check_emergency_mode() == 1) {
-		broadcast::fail_emergency_mode(); // no peers available, failed
-	}
-	if(isocket < 0) {
-		error_handler("SOCKET CREATION");
-		recieve_chain(is_transaction);
-	}
-	/*if(check_node(retrieve_peer(0)) == 1) { Thanks to ISP only 1 IP for all devices!
-		next_peer = retrieve_peer(1);
-	}*/
-	sockaddr.sin_port = htons(PORT);
-	sockaddr.sin_family = AF_INET;
-	sockaddr.sin_addr.s_addr = INADDR_ANY;
-	inet = inet_pton(AF_INET, retrieve_peer(0).c_str(), &sockaddr.sin_addr);
-	if(inet <= 0) {
-		error_handler("INET_PTON : return code " + std::to_string(inet));
-		recieve_chain(is_transaction);
-	}
-	client_fd = connect(isocket, (struct sockaddr*)&sockaddr, sizeof(sockaddr));
-	if(client_fd < 0) {
-		error_handler("CONNECT");
-		recieve_chain(is_transaction);
-	}
-	std::cout << "Waiting for blockchain..." << std::endl;
-	read(isocket, buff, 1024);
-	buff[strlen(buff)] = '\0';
-	if(is_transaction) {
-		blockchain::add_transaction(raw_to_json(buff)); // attempting to add transaction
-	}
-	ifsblock.open(blockchain::path);
-	if(blockchain::is_empty(ifsblock)) {
-		ifsblock.close();
-		ofsBlock.open(blockchain::path);
-		std::cout << buff << std::endl;
-		ofsBlock << buff;
-	} else {
-		nlohmann::json jblock;
-		try {
-			jblock = jblock.parse(buff);
+	do {
+		if(broadcast::check_emergency_mode() == 1) {
+			broadcast::fail_emergency_mode(); // no peers available, failed
+		}
+		if(isocket < 0) {
+			error_handler("SOCKET CREATION");
+			continue;
+		}
+		sockaddr.sin_port = htons(PORT);
+		sockaddr.sin_family = AF_INET;
+		sockaddr.sin_addr.s_addr = INADDR_ANY;
+		inet = inet_pton(AF_INET, retrieve_peer(0).c_str(), &sockaddr.sin_addr);
+		if(inet <= 0) {
+			error_handler("INET_PTON : return code " + std::to_string(inet));
+			continue;
+		}
+		client_fd = connect(isocket, (struct sockaddr*)&sockaddr, sizeof(sockaddr));
+		if(client_fd < 0) {
+			error_handler("CONNECT");
+			continue;
+		}
+		std::cout << "Waiting for blockchain..." << std::endl;
+		read(isocket, buff, 1024);
+		buff_size = std::atol(buff); // getting buffer size for real blockchain
+		char buffchain[buff_size];
+		read(isocket, buffchain, buff_size);
+		std::string str_buff(buffchain);
+		if(is_transaction) {
+			try {
+				blockchain::add_transaction(raw_to_json(str_buff)); // attempting to add transaction
+			} catch(...) {
+				continue;
+			}
+		}
+		ifsblock.open(blockchain::path);
+		if(blockchain::is_empty(ifsblock)) {
+			ifsblock.close();
+			ofsBlock.open(blockchain::path);
+		} else {
+			nlohmann::json jblock;
+			try {
+				jblock = jblock.parse(buff);
 
-		} catch(nlohmann::json::parse_error) {
-			return 1; // block is invalid json, failing
+			} catch(nlohmann::json::parse_error) {
+				return 1; // block is invalid json, failing
+			}
+			if(save_block(jblock) != 0) {
+				return 1; // either invalid json or manipulated block
+			}
 		}
-		if(save_block(jblock) != 0) {
-			return 1; // either invalid json or manipulated block
-		}
-	}
+		break;
+	} while(true);
 	return 0;
 }
 
@@ -231,7 +234,6 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction) {
 	} else {
 		next_peer = retrieve_peer(0);
 	}
-	const char *json_char = json_str.c_str();
 	/*if(check_node(retrieve_peer(0)) == 1) { Thanks to ISP only 1 IP for all devices!
 		next_peer = retrieve_peer(1);
 	}
@@ -260,7 +262,11 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction) {
 	if((new_socket = accept(server_fd, (struct sockaddr*)&sockaddr, &size)) < 0) {
 		error_handler("ACCEPT");
 	} 
-	if (send(new_socket, json_char, strnlen(json_char, json_str.size()), 0) == -1) { // * strnlen function causes issues since not sending correct data * 
+	std::string length_str = std::to_string(json_str.length());
+	if(send(new_socket, length_str.c_str(), 1024, 0) == -1) { // sending size of buffer
+		error_handler("SEND");
+	}
+	if (send(new_socket, json_str.c_str(), json_str.length(), 0) == -1) { 
 		error_handler("SEND");
 	}
 	close(new_socket);
