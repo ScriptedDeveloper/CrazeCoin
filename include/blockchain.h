@@ -14,11 +14,14 @@ namespace blockchain {
 	bool verify_transaction(nlohmann::json j);
 	int block_number();
 	int check_chain();
+	std::string get_previous_hash(bool last_block);
 	int add_transaction(nlohmann::json jtransaction);
 	int check_balances(std::string addr);
+	int add_block(nlohmann::json jblock);
 	void init_blockchain();
 	void create_json(std::string name);
 	bool is_empty(std::ifstream &ifS);
 	void check_files();
+	std::string get_hash();
 	nlohmann::json blockchain_json();
 };

@@ -48,6 +48,12 @@ block blockchain::generate_genesis_block() {
 	return b;
 }
 
+int blockchain::add_block(nlohmann::json jblock) {
+	block b(get_previous_hash(false), jblock["recieve_addr"], jblock["send_addr"], jblock["amount"], false);
+	b.add_block();
+	return 0;
+}
+
 std::string blockchain::retrieve_addr() {
 	std::ifstream ifs(addr_path);
 	std::stringstream ss_addr;
@@ -111,8 +117,8 @@ nlohmann::json blockchain::blockchain_json() {
 bool blockchain::verify_transaction(nlohmann::json j) {
 	CryptoPP::RSA::PublicKey publkey;
 	std::vector<std::string> raw_vector, hex_vector = {"signature", "send_addr"};
-	std::string timestamp = std::to_string((int)j["timestamp"]);
-	std::string amount = j["amount"];
+	std::string timestamp = j["timestamp"];
+	std::string amount = std::to_string((int)j["amount"]);
 	std::string reciever = j["recieve_addr"];
 	//std::string timestamp = std::to_string((int)j["timestamp"]), amount = std::to_string((int)j["amount"]) , reciever = j["recieve_addr"]; // JSON dump function acting weird
 	for(int i = 0; i < hex_vector.size(); i++) {
@@ -147,6 +153,21 @@ void blockchain::create_json(std::string name) {
 	std::ofstream ofs(name);
 	ofs << "{}";
 	ofs.close();
+}
+
+std::string blockchain::get_previous_hash(bool last_block) {
+	std::ifstream ifschain(blockchain::path);
+	nlohmann::json jchain;
+	try {
+		jchain = jchain.parse(ifschain);
+	} catch(...) {
+		std::cout << "Blockchain is corrupted!" << std::endl;
+		exit(1); // somethings wrong with the blockchain
+	}
+	if(last_block) {
+		return jchain[std::to_string((int)jchain["blocks"])]["hash"];
+	}
+	return jchain[std::to_string((int)jchain["blocks"])]["previous_hash"];
 }
 
 void blockchain::check_files () {

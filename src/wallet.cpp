@@ -86,7 +86,7 @@ int wallet::send(char **argv) {
 	std::string timestamp = block::get_timestamp();
 	std::string sign_data = std::string(argv[3]) + "/" + std::string(argv[4]) + "/" + timestamp;
 	jtransaction["recieve_addr"] = argv[3];
-	jtransaction["amount"] = argv[4];
+	jtransaction["amount"] = std::atoi(argv[4]);
 	jtransaction["send_addr"] = print_addr();
 	jtransaction["timestamp"] = timestamp;
 	rsa_wrapper::load_private_key(path, privkey);
