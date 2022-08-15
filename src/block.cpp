@@ -120,10 +120,9 @@ int block::add_block(){ // issue is that json is not correct
 	mine_block();
 	j_new = set_data(j, index_str);
  	std::ofstream ofChain(blockchain::path);
-	ofChain << j_new;
+	ofChain << std::setw(4) << j_new << std::endl; // beautify JSON data before writing to file
 	ofChain.close(); // might write a function for just opening/closing blockchain file
 	block::create_block_file(j_new[index_str]);
-	//std::cout << send_chain(false); // sending block over network CHANGED
 	return 0;
 }
 

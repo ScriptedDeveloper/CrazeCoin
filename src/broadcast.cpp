@@ -66,7 +66,7 @@ std::string broadcast::retrieve_pending(int n) { // same as retrieve_peer with s
 
 void broadcast::clear_peers() { 
 	std::ofstream ofs(blockchain::peer_path);
-	ofs << "{\"peers\" : [], \"pending_peers\" : []}";
+	ofs << "{\n    \"peers\" : [],\n    \"pending_peers\" : []\n}" << std::endl;
 	ofs.close();
 }
 
@@ -120,7 +120,7 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction) {
 			jchain["blocks"] = blocks_num;
 			jchain[std::to_string(blocks_num)] = jblock;
 			ofchain.open(blockchain::path);
-			ofchain << jchain; // saving edits to blockchain
+			ofchain << std::setw(4) << jchain << std::endl; // saving edits to blockchain
 
 		} catch(nlohmann::json::parse_error) {
 			return 1; // blockchain is invalid json
@@ -189,7 +189,7 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 		}
 		client_fd = connect(isocket, (struct sockaddr*)&sockaddr, sizeof(sockaddr));
 		if(client_fd < 0) {
-			error_handler("CONNECT");
+			error_handler("WAITING FOR CONNECTION");
 			continue;
 		}
 		std::cout << "Waiting for blockchain..." << std::endl;
@@ -351,7 +351,7 @@ int broadcast::get_peers() {
 	j["peers"] = jpeers;
 	j["pending_peers"] = jpending;
 	std::ofstream ofsPeer(blockchain::peer_path);
-	ofsPeer << j;
+	ofsPeer << j.dump() << std::endl;
 	ifsPeer.close();
 	ofsPeer.close();
 	return 0;
