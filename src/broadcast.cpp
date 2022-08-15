@@ -78,7 +78,12 @@ void broadcast::fail_emergency_mode() {
 
 int broadcast::check_emergency_mode() {
 	std::ifstream ifs(blockchain::peer_path);
-	nlohmann::json jpeers = jpeers.parse(ifs);
+	nlohmann::json jpeers;
+	try {
+		jpeers = jpeers.parse(ifs);
+	} catch (...) {
+		return 2; // invalid json
+	}
 	if(jpeers["peers"].empty()){ // peers JSON file is empty
 		return 1; // peers empty
 	} else if(jpeers["pending_peers"].empty()) {
