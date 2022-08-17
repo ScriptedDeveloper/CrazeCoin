@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <cryptopp/filters.h>
 #include <cryptopp/pssr.h>
 #include <nlohmann/json.hpp>
+#include <thread>
 #include <vector>
 #include "../include/blockchain.h"
 #include "../include/block.h"
@@ -35,7 +36,8 @@ namespace blockchain {
 	const std::string path = std::experimental::filesystem::current_path().u8string() + "/blockchain.json";
 	const std::string peer_path = std::experimental::filesystem::current_path().u8string() + "/peers.json";
 	const std::string addr_path = std::experimental::filesystem::current_path().u8string() + "/address.bin";
-	const std::string peer_tracker = "192.168.10.103:6882"; // changing later to correct domain
+	const std::string peer_tracker = "192.168.10.101:6882"; // changing later to correct domain
+	const int max_transactions = 3; // max transactions in a block
 }
 
 bool blockchain::is_empty(std::ifstream &ifS) {
@@ -43,13 +45,13 @@ bool blockchain::is_empty(std::ifstream &ifS) {
 }
 
 block blockchain::generate_genesis_block() {
-	block b("0", retrieve_addr(), "0", 20, true); // 20 coins will be sent to miner's wallet
+	block b("0", retrieve_addr(), "0", 20); // 20 coins will be sent to miner's wallet
 	b.add_block();
 	return b;
 }
 
 int blockchain::add_block(nlohmann::json jblock) {
-	block b(get_previous_hash(false), jblock["recieve_addr"], jblock["send_addr"], jblock["amount"], false);
+	block b(get_previous_hash(false), jblock["recieve_addr"], jblock["send_addr"], jblock["amount"]);
 	b.add_block();
 	return 0;
 }
@@ -62,21 +64,15 @@ std::string blockchain::retrieve_addr() {
 }
 
 bool blockchain::is_blockchain_empty() {
-	std::ifstream ifChain(blockchain::path);
-	auto ss = std::stringstream();
-	ss << ifChain.rdbuf();
-	ifChain.close();
-	if(ss.str() != "{}" && !ss.str().empty()) {
-		return false;
-	}
-	return (bool)is_empty(ifChain);
+	std::ifstream ifschain(blockchain::path);
+	return (bool)is_empty(ifschain);
 }
 
 int blockchain::check_chain() {
 	nlohmann::json jchain = blockchain::blockchain_json();
 	int blocks = jchain["blocks"];
 	for(int i = 0; i < blocks; i++) {
-		if(broadcast::check_block(jchain[std::to_string(blocks)]) != 0) {
+		if((nlohmann::json)broadcast::check_block(jchain[std::to_string(blocks)]) != 0) {
 			return 1; // some block has failed the check, blockchain is compromised!
 		}
 	}
@@ -109,8 +105,13 @@ int blockchain::check_balances(std::string addr) {
 }
 
 nlohmann::json blockchain::blockchain_json() {
-	std::ifstream ifschain(blockchain::path);
-	nlohmann::json jchain = jchain.parse(ifschain);
+	nlohmann::json jchain;
+	try {
+		 std::ifstream ifschain(blockchain::path);
+		jchain = jchain.parse(ifschain);
+	} catch(...) {
+		return "";
+	}
 	return jchain;
 }
 
@@ -144,8 +145,15 @@ void blockchain::init_blockchain() {
 		std::ofstream ofs(blockchain::path); // clearing blockchain content in case check_chain == 1
 		broadcast::recieve_chain(false);
 	} else {
-		//broadcast::send_chain(true, false); // is original peer/miner, broadcasting blockchain
-		broadcast::recieve_chain(true); // changing for debugging
+		while(true) {
+			broadcast::recieve_chain(true);
+			/*
+			std::thread broadcaster(broadcast::send_chain, true, false); // is original peer/miner, broadcasting blockchain
+			std::thread transaction_recieve(broadcast::recieve_chain, true); // changing for debugging
+			broadcaster.join();
+			transaction_recieve.join();
+			*/
+		}
 	}
 }
 

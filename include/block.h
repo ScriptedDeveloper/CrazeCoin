@@ -12,10 +12,11 @@ class block {
 		std::string recieve_addr; // address of reciever
 		int nounce, index, amount;
 		// Constructor
-		block(std::string previous_hash, std::string recieve_addr, std::string send_addr, int amount, bool genesis);
+		block(std::string previous_hash, std::string recieve_addr, std::string send_addr, int amount);
 		//Class functions
 		std::string generate_hash(std::string plain_text);	
 		std::string mine_block();
+		std::string get_merkle_root();
 	 	static std::string get_timestamp();
 		std::string verify_block();
 		int test_block();

@@ -26,14 +26,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "../include/broadcast.h"
 #include "../include/block.h"
 
-block::block(std::string previous_hash, std::string recieve_addr, std::string send_addr, int amount, bool genesis){
+block::block(std::string previous_hash, std::string recieve_addr, std::string send_addr, int amount){
 	this->previous_hash = previous_hash;
 	this->nounce = 0;
 	this->difficulty = 4; // for now
 	this->recieve_addr = recieve_addr;
 	this->send_addr = send_addr;
 	this->amount = amount;
-	this->genesis = genesis;
 }
 
 std::string block::generate_hash(std::string plain_text) {
@@ -72,6 +71,16 @@ std::string block::get_timestamp() {
 
 }
 
+std::string block::get_merkle_root() {
+	nlohmann::json jchain;
+	try {
+		jchain = blockchain::blockchain_json();
+	} catch(...) {
+		return ""; // genesis block, no need for merkle_root
+	}
+	return jchain["merkle_root"];
+}
+
 int block::create_block_file(nlohmann::json j) {
 	std::ofstream ofsblock("block.json");
 	ofsblock << j;
@@ -81,6 +90,11 @@ int block::create_block_file(nlohmann::json j) {
 nlohmann::json block::set_data(nlohmann::json j, std::string index_str) {
 	if(this->timestamp.empty() || this->hash.empty()) { // not going to check for all, assuming all vars are empty
 		return NULL;
+	}
+	try {
+		this->merkle_root = get_merkle_root();
+	} catch(...) {
+		// ignoring exception since merkle_root doesn't exist
 	}
 	j[index_str]["timestamp"] = this->timestamp;
 	j[index_str]["hash"] = this->hash;
@@ -93,10 +107,11 @@ nlohmann::json block::set_data(nlohmann::json j, std::string index_str) {
 	this->nounce = 0; // clearing nounce for next block
 	if(this->merkle_root.empty()) {
 		j["merkle_root"] = this->hash; // if its the genesis block, use hash of current block
-	
+		j[index_str]["success"] = true; // genesis block should only contain 1 transaction
 	} else {
 		this->merkle_root =  generate_hash(this->merkle_root + this->previous_hash);
 		j["merkle_root"] = this->merkle_root;
+		j[index_str]["success"] = false;
 	}
 	j["blocks"] = this->index;
 	return j;
@@ -104,7 +119,7 @@ nlohmann::json block::set_data(nlohmann::json j, std::string index_str) {
 
 int block::add_block(){ // issue is that json is not correct
 	nlohmann::json j, j_new;
-	if(this->previous_hash.empty() && !this->genesis) {
+	if(this->previous_hash.empty()) {
 		return 1; // block data is not initialized
 	}
 	if(blockchain::is_blockchain_empty()) {
@@ -112,7 +127,6 @@ int block::add_block(){ // issue is that json is not correct
 	} else {
 		this->index = blockchain::block_number();
 		j = blockchain::blockchain_json();
-		
 	}
 	this->index++;
 	std::string index_str = std::to_string(this->index);
