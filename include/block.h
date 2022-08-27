@@ -11,6 +11,7 @@ class block {
 		std::string send_addr; // address of sender
 		std::string recieve_addr; // address of reciever
 		int nounce, index, amount;
+		int difficulty; // adding an automated difficulty function later
 		// Constructor
 		block(std::string previous_hash, std::string recieve_addr, std::string send_addr, int amount);
 		//Class functions
@@ -26,7 +27,6 @@ class block {
 	private:
 		std::string hash;
 		std::string previous_hash;
-		int difficulty; // adding an automated difficulty function later
 		nlohmann::json set_data(nlohmann::json j, std::string json_str);
 		int create_block_file(nlohmann::json j);
 

@@ -40,6 +40,17 @@ namespace blockchain {
 	const int max_transactions = 3; // max transactions in a block
 }
 
+int blockchain::get_transaction_num(std::string block_num) { // gets transaction number in block
+	nlohmann::json jchain = blockchain_json();	
+	int i = 0;
+	std::string str = jchain.dump();
+	for(auto elm : jchain[block_num].items()) { // problem here
+		i++;
+	}
+	i = i - 2;
+	return i; // decrementing because success object isn't a transaction/array
+}
+
 bool blockchain::is_empty(std::ifstream &ifS) {
 	return ifS.peek() == std::ifstream::traits_type::eof();
 }
@@ -71,9 +82,12 @@ bool blockchain::is_blockchain_empty() {
 int blockchain::check_chain() {
 	nlohmann::json jchain = blockchain::blockchain_json();
 	int blocks = jchain["blocks"];
-	for(int i = 0; i < blocks; i++) {
-		if((nlohmann::json)broadcast::check_block(jchain[std::to_string(blocks)]) != 0) {
-			return 1; // some block has failed the check, blockchain is compromised!
+	for(int i_block = 1; i_block < blocks; i_block++) {
+		int trans_num = get_transaction_num(std::to_string(i_block));
+		for(int i_trans = 0; i_trans < trans_num; i_trans++) {
+			if((nlohmann::json)broadcast::check_block(jchain[std::to_string(i_block)][std::to_string(i_trans)]) != 0) {
+				return 1; // some block has failed the check, blockchain is compromised!
+			}
 		}
 	}
 	return 0;
@@ -90,16 +104,20 @@ int blockchain::check_balances(std::string addr) {
 	nlohmann::json jchain = jchain.parse(ifschain);
 	int blocks = block_number() + 1;
 	int balance = -1; // balance of wallet
-	for(int i = 1; i < blocks; i++) {
+	for(int i = 1; i <= blocks; i++) {
 		std::string str_i = std::to_string(i);
-		if(jchain[str_i]["recieve_addr"] == addr) {
-			balance = jchain[str_i]["amount"];
-		}  else if(jchain[str_i]["send_addr"] == addr && balance == -1) {
-			std::cout << "[SYSTEM] Error! Blockchain is invalid! Address " << addr << " is sending coins without having coins!" << std::endl;
-			exit(1); // balance is not initialized, blockchain is corrupted!
-		} else if(jchain[str_i]["send_addr"] == addr) {
-			balance = balance - (int)jchain[str_i]["amount"];
-		}	
+		int trans_num = get_transaction_num(std::to_string(i));
+		for(int i = 0; i <= trans_num; i++) {
+			std::string str_transnum = std::to_string(trans_num);
+			if(jchain[str_i][str_transnum]["recieve_addr"] == addr) {
+				balance = jchain[str_i][str_transnum]["amount"];
+			} else if(jchain[str_i][str_transnum]["send_addr"] == addr && balance == -1) {
+				std::cout << "[SYSTEM] Error! Blockchain is invalid! Address " << addr << " is sending coins without having coins!" << std::endl;
+				exit(1); // balance is not initialized, blockchain is corrupted!
+			} else if(jchain[str_i][str_transnum]["send_addr"] == addr) {
+				balance = balance - (int)jchain[str_i][str_transnum]["amount"];
+			}
+		}
 	}
 	return balance;
 }
@@ -115,25 +133,30 @@ nlohmann::json blockchain::blockchain_json() {
 	return jchain;
 }
 
-bool blockchain::verify_transaction(nlohmann::json j) {
+std::pair<bool, nlohmann::json> blockchain::verify_transaction(nlohmann::json j) {
 	CryptoPP::RSA::PublicKey publkey;
 	std::vector<std::string> raw_vector, hex_vector = {"signature", "send_addr"};
 	std::string timestamp = j["timestamp"];
 	std::string amount = std::to_string((int)j["amount"]);
 	std::string reciever = j["recieve_addr"];
-	//std::string timestamp = std::to_string((int)j["timestamp"]), amount = std::to_string((int)j["amount"]) , reciever = j["recieve_addr"]; // JSON dump function acting weird
+	block b_mine(get_previous_hash(true), j["recieve_addr"], j["send_addr"], j["amount"]);
+	std::string data = reciever + "/" + amount + "/" + timestamp;
+	b_mine.data = data;
+	b_mine.timestamp = timestamp;
+	j["hash"] = b_mine.mine_block();
+	j["nounce"] = b_mine.nounce;
+	j["difficulty"] = b_mine.difficulty;
 	for(int i = 0; i < hex_vector.size(); i++) {
 		raw_vector.push_back(rsa_wrapper::raw_hex_decode(j[hex_vector[i]]));
 	}
 	CryptoPP::StringSource ss(raw_vector[1], true);
 	publkey.Load(ss); // loads sender's address (public key) to variable
-	std::string data = reciever + "/" + amount + "/" + timestamp;
 	CryptoPP::RSASSA_PKCS1v15_SHA_Verifier verifier(publkey);
 	bool verify_trans = verifier.VerifyMessage((const CryptoPP::byte*)data.c_str(), data.length(), (const CryptoPP::byte*)raw_vector[0].c_str(), raw_vector[0].size());
 	if(verify_trans) {
-		return check_balances(j["send_addr"]);
+		return {check_balances(j["send_addr"]), j};
 	}
-	return verify_trans;
+	return {verify_trans, j};
 }
 
 void blockchain::init_blockchain() {
@@ -172,13 +195,14 @@ std::string blockchain::get_previous_hash(bool last_block) {
 		std::cout << "Blockchain is corrupted!" << std::endl;
 		exit(1); // somethings wrong with the blockchain
 	}
+	std::string trans_num = std::to_string(get_transaction_num(std::to_string((int)jchain["blocks"])));
 	if(last_block) {
-		return jchain[std::to_string((int)jchain["blocks"])]["hash"];
+		return jchain[std::to_string((int)jchain["blocks"])][trans_num]["hash"];
 	}
-	return jchain[std::to_string((int)jchain["blocks"])]["previous_hash"];
+	return jchain[std::to_string((int)jchain["blocks"])][trans_num]["previous_hash"];
 }
 
-void blockchain::check_files () {
+void blockchain::check_files() {
 	std::ifstream ifsaddr(addr_path), ifsPeer(peer_path);
 	if(blockchain::is_empty(ifsPeer)) {
 		std::cout << "\n Peer required files not found, creating..." << std::endl;
@@ -204,14 +228,6 @@ void blockchain::check_files () {
 		ofsaddr.close();
 	}
 	ifsPeer.close();
-}
-
-int blockchain::add_transaction(nlohmann::json jtransaction) {
-	if(!verify_transaction(jtransaction)) {
-		return 1; // verifying transaction failed
-	}
-	
-	return 0;
 }
 
 /* might be useful for later

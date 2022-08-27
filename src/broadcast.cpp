@@ -46,7 +46,7 @@ std::string broadcast::retrieve_peer(int n) {
 	nlohmann::json j;
 	try {
 		j = j.parse(ifs);
-		peer = j["peers"][n]; // returning n element at the moment
+		peer = j["peers"][n]; // returning n element at the moment (array)
 	} catch(...) { // in case peer.json has been manipulated or only pending peers
 		blockchain::create_json(blockchain::peer_path);
 		blockchain::init_blockchain();	
@@ -76,7 +76,6 @@ void broadcast::fail_emergency_mode() {
 	exit(1); // emergency mode has failed, quitting.
 }
 
-
 int broadcast::check_emergency_mode() {
 	std::ifstream ifs(blockchain::peer_path);
 	nlohmann::json jpeers;
@@ -96,9 +95,12 @@ int broadcast::check_emergency_mode() {
 }
 
 int broadcast::check_block(nlohmann::json jblock) {
-	block b(blockchain::get_previous_hash(false), jblock["recieve_addr"], jblock["send_addr"], jblock["amount"]);
+	std::string hash = jblock["hash"];
+	std::pair<std::string, std::string> recieve_amount = {jblock["recieve_addr"], std::to_string((int)jblock["amount"])};
+	block b(blockchain::get_previous_hash(true), jblock["recieve_addr"], jblock["send_addr"], jblock["amount"]);
 	b.timestamp = jblock["timestamp"];
 	b.nounce = jblock["nounce"];
+	b.data = recieve_amount.first + "/" + recieve_amount.second + "/" + b.timestamp;
 	if(b.verify_block() != jblock["hash"]) {
 		return 1; // block is invalid and has been rejected
 	}
@@ -108,7 +110,7 @@ int broadcast::check_block(nlohmann::json jblock) {
 int broadcast::add_transaction(nlohmann::json jtrans) { // adds transaction to block
 	nlohmann::json j = blockchain::blockchain_json();
 	std::string blocks_num = std::to_string(blockchain::block_number());
-	std::fstream fchain;
+	std::ofstream ofchain;
 	int i = 0; // checks amount of transactions
 	bool first_time = false, exists = j[blocks_num].contains("success"); // first_time checks if block doesnt have proper array structure yet
 	if(exists && j[blocks_num]["success"]) {
@@ -118,19 +120,18 @@ int broadcast::add_transaction(nlohmann::json jtrans) { // adds transaction to b
 		first_time = true;
 	}
 	if(!first_time) {
-		for(auto elm : j[blocks_num].items()) {
-			if(elm.value().is_array()) {
-				i++;
-			}
-		}
+		i = blockchain::get_transaction_num(blocks_num);
 	}
 	if(i == blockchain::max_transactions) {
-		j[blocks_num]["success"] = true;
+		j[blocks_num]["success"] = true;	
+		ofchain = std::ofstream(blockchain::path);
+		ofchain << std::setw(4) << j << std::endl;
 		return 1;
 	}
-	fchain = std::fstream(blockchain::path);
+	i++;
 	j[blocks_num][std::to_string(i)] = jtrans;
-	fchain << std::setw(4) << j << std::endl;
+	ofchain = std::ofstream(blockchain::path);
+	ofchain << std::setw(4) << j << std::endl;
 	return 0;
 }
 
@@ -138,6 +139,7 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction) {
 	std::ofstream ofchain;	
 	nlohmann::json jchain = blockchain::blockchain_json();
 	int blocks_num = blockchain::block_number();
+	std::string addr = jblock["recieve_addr"];
 	block b(blockchain::get_previous_hash(true), jblock["recieve_addr"], jblock["send_addr"], jblock["amount"]);
 	if(!is_transaction) {
 		try {
@@ -166,7 +168,7 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction) {
 			}
 
 		} catch(...) {
-			//return 1; // something horribly went wrong..
+			return 1; // something horribly went wrong..
 		}
 	
 	}
@@ -227,9 +229,14 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 		char buffchain[buff_size];
 		read(isocket, buffchain, buff_size);
 		std::string str_buff(buffchain);
+		nlohmann::json jblock;
 		if(is_transaction) {
 			try {
-				blockchain::add_transaction(raw_to_json(str_buff)); // attempting to add transaction
+				std::pair<bool, nlohmann::json> return_val = blockchain::verify_transaction(raw_to_json(str_buff)); // attempting to add transaction
+				if(!return_val.first) {
+					continue;  // transaction is invalid.
+				}
+				jblock = return_val.second;
 			} catch(...) {
 				continue;
 			}
@@ -240,13 +247,6 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 			ofsBlock.open(blockchain::path);
 			continue;
 		} else {
-			nlohmann::json jblock;
-			try {
-				jblock = raw_to_json(str_buff);
-
-			} catch(...) {
-				return 1; // block is invalid json, failing
-			}
 			if(save_block(jblock, true) != 0) {
 				return 1; // either invalid json or manipulated block
 			}
