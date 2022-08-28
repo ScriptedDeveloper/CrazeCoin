@@ -64,7 +64,6 @@ std::string block::verify_block() {
 	return generate_hash(this->previous_hash + this->data + std::to_string(this->nounce) + this->timestamp);
 }
 
-
 std::string block::get_timestamp() {
 	auto time = std::chrono::system_clock::now();
 	return std::to_string(std::chrono::duration_cast<std::chrono::seconds>(time.time_since_epoch()).count());
@@ -97,14 +96,6 @@ nlohmann::json block::set_data(nlohmann::json j, std::string index_str) {
 	} catch(...) {
 		// ignoring exception since merkle_root doesn't exist
 	}
-	/*
-	try {	
-		j[index_str]["0"]["signature"] = j["signature"];
-		j[index_str]["0"]["signature_len"] = j["signature_len"]; // in case both exist, not required in genesis block (yet)
-	} catch(...) {
-		j[index_str]["0"].erase("signature"); // just in case those exist, not required for genesis block (yet)
-		j[index_str]["0"].erase("signature_len");
-	}*/
 	j[index_str]["0"]["timestamp"] = this->timestamp;
 	j[index_str]["0"]["hash"] = this->hash;
 	j[index_str]["0"]["send_addr"] = this->send_addr;
@@ -141,7 +132,7 @@ int block::add_block(){ // issue is that json is not correct
 	this->index++;
 	std::string index_str = std::to_string(this->index);
 	this->timestamp = get_timestamp();
-	this->data = recieve_amount.first + "/" + recieve_amount.second + "/" + this->timestamp;
+	this->data = recieve_amount.first + "/" + recieve_amount.second + "/" + this->send_addr + "/" + this->timestamp;
 	mine_block();
 	j_new = set_data(j, index_str);
  	std::ofstream ofChain(blockchain::path);

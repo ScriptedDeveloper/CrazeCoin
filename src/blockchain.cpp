@@ -140,7 +140,7 @@ std::pair<bool, nlohmann::json> blockchain::verify_transaction(nlohmann::json j)
 	std::string amount = std::to_string((int)j["amount"]);
 	std::string reciever = j["recieve_addr"];
 	block b_mine(get_previous_hash(true), j["recieve_addr"], j["send_addr"], j["amount"]);
-	std::string data = reciever + "/" + amount + "/" + timestamp;
+	std::string data = reciever + "/" + amount + "/" + (std::string)j["send_addr"] + "/" + timestamp;
 	b_mine.data = data;
 	b_mine.timestamp = timestamp;
 	j["hash"] = b_mine.mine_block();

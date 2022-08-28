@@ -100,7 +100,7 @@ int broadcast::check_block(nlohmann::json jblock) {
 	block b(blockchain::get_previous_hash(true), jblock["recieve_addr"], jblock["send_addr"], jblock["amount"]);
 	b.timestamp = jblock["timestamp"];
 	b.nounce = jblock["nounce"];
-	b.data = recieve_amount.first + "/" + recieve_amount.second + "/" + b.timestamp;
+	b.data = recieve_amount.first + "/" + recieve_amount.second + "/" + (std::string)jblock["send_addr"] + "/" + b.timestamp;
 	if(b.verify_block() != jblock["hash"]) {
 		return 1; // block is invalid and has been rejected
 	}
@@ -160,6 +160,8 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction) {
 		try {	
 			if(!jchain[std::to_string(blocks_num)].contains("success") || jchain[std::to_string(blocks_num)]["success"] == false) {
 				if(blockchain::check_balances(jblock["send_addr"]) >= jblock["amount"]) { // checking whether wallet has enough coins
+					jblock.erase("signature");
+					jblock.erase("signature_len"); // unneeded since sender/reciever addr is added into hash and signature has already been verifed
 					add_transaction(jblock);
 				}
 			} 
