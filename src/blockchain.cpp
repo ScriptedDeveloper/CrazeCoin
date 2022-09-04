@@ -82,9 +82,9 @@ bool blockchain::is_blockchain_empty() {
 int blockchain::check_chain() {
 	nlohmann::json jchain = blockchain::blockchain_json();
 	int blocks = jchain["blocks"];
-	for(int i_block = 1; i_block < blocks; i_block++) {
+	for(int i_block = 1; i_block <= blocks; i_block++) {
 		int trans_num = get_transaction_num(std::to_string(i_block));
-		for(int i_trans = 0; i_trans < trans_num; i_trans++) {
+		for(int i_trans = 0; i_trans <= trans_num; i_trans++) {
 			if((nlohmann::json)broadcast::check_block(jchain[std::to_string(i_block)][std::to_string(i_trans)]) != 0) {
 				return 1; // some block has failed the check, blockchain is compromised!
 			}
@@ -139,13 +139,15 @@ std::pair<bool, nlohmann::json> blockchain::verify_transaction(nlohmann::json j)
 	std::string timestamp = j["timestamp"];
 	std::string amount = std::to_string((int)j["amount"]);
 	std::string reciever = j["recieve_addr"];
-	block b_mine(get_previous_hash(true), j["recieve_addr"], j["send_addr"], j["amount"]);
 	std::string data = reciever + "/" + amount + "/" + (std::string)j["send_addr"] + "/" + timestamp;
+	/*
+	block b_mine(get_previous_hash(true), j["recieve_addr"], j["send_addr"], j["amount"]);
 	b_mine.data = data;
 	b_mine.timestamp = timestamp;
 	j["hash"] = b_mine.mine_block();
 	j["nounce"] = b_mine.nounce;
 	j["difficulty"] = b_mine.difficulty;
+	*/
 	for(int i = 0; i < hex_vector.size(); i++) {
 		raw_vector.push_back(rsa_wrapper::raw_hex_decode(j[hex_vector[i]]));
 	}
@@ -160,7 +162,7 @@ std::pair<bool, nlohmann::json> blockchain::verify_transaction(nlohmann::json j)
 }
 
 void blockchain::init_blockchain() {
-	generate_genesis_block();
+	//generate_genesis_block();
 	if(broadcast::signup_peer() == 0) { // if server doesnt respond, skip
 		broadcast::get_peers(); // Connecting to other peers
 	}
@@ -195,6 +197,7 @@ std::string blockchain::get_previous_hash(bool last_block) {
 		std::cout << "Blockchain is corrupted!" << std::endl;
 		exit(1); // somethings wrong with the blockchain
 	}
+	std::string block_num = std::to_string((int)jchain["blocks"]);
 	std::string trans_num = std::to_string(get_transaction_num(std::to_string((int)jchain["blocks"])));
 	if(last_block) {
 		return jchain[std::to_string((int)jchain["blocks"])][trans_num]["hash"];

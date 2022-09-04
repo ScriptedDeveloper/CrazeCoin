@@ -57,6 +57,7 @@ std::string block::mine_block() {
 		this->nounce++;
 		this->hash = generate_hash(this->previous_hash + this->data + std::to_string(this->nounce) + this->timestamp);
 	}
+	std::cout << this->previous_hash + this->data + std::to_string(this->nounce) + this->timestamp << std::endl;
 	return this->hash;
 }
 
@@ -71,12 +72,7 @@ std::string block::get_timestamp() {
 }
 
 std::string block::get_merkle_root() {
-	nlohmann::json jchain;
-	try {
-		jchain = blockchain::blockchain_json();
-	} catch(...) {
-		return ""; // genesis block, no need for merkle_root
-	}
+	nlohmann::json jchain = blockchain::blockchain_json();
 	return jchain["merkle_root"];
 }
 
@@ -86,10 +82,7 @@ int block::create_block_file(nlohmann::json j) {
 	return 0;
 }
 
-nlohmann::json block::set_data(nlohmann::json j, std::string index_str) {
-	if(this->timestamp.empty() || this->hash.empty()) { // not going to check for all, assuming all vars are empty
-		return NULL;
-	}
+nlohmann::json block::set_finished_data(nlohmann::json j, std::string index_str) {
 	try {
 		this->merkle_root = get_merkle_root();
 
@@ -97,27 +90,53 @@ nlohmann::json block::set_data(nlohmann::json j, std::string index_str) {
 		// ignoring exception since merkle_root doesn't exist
 	}
 	j[index_str]["0"]["timestamp"] = this->timestamp;
-	j[index_str]["0"]["hash"] = this->hash;
 	j[index_str]["0"]["send_addr"] = this->send_addr;
-	j[index_str]["0"]["recieve_addr"] = this->recieve_addr.c_str(); // imposter
+	j[index_str]["0"]["recieve_addr"] = this->recieve_addr.c_str();
 	j[index_str]["0"]["previous_hash"] = this->previous_hash;
 	j[index_str]["0"]["difficulty"] = this->difficulty;
 	j[index_str]["0"]["amount"] = this->amount;
-	j[index_str]["0"]["nounce"] = this->nounce; // adding nounce for other miners to check chain
-	this->nounce = 0; // clearing nounce for next block
-	if(this->merkle_root.empty()) {
+	if(this->merkle_root.empty()) {	
+		j[index_str]["0"]["hash"] = this->hash; 
+		j[index_str]["0"]["nounce"] = this->nounce; // adding nounce for other miners to check chain
 		j["merkle_root"] = this->hash; // if its the genesis block, use hash of current block
 		j[index_str]["success"] = true; // genesis block should only contain 1 transaction
 	} else {
+		/*
 		this->merkle_root =  generate_hash(this->merkle_root + this->previous_hash);
 		j["merkle_root"] = this->merkle_root;
+		*/
 		j[index_str]["success"] = false;
 	}
+	this->nounce = 0; // clearing nounce for next block
 	j["blocks"] = this->index;
 	return j;
 }
 
-int block::add_block(){ // issue is that json is not correct
+nlohmann::json block::mine_transaction(int trans_num) {
+	nlohmann::json jchain = blockchain::blockchain_json();
+	std::string str_num = std::to_string(trans_num), index;
+	std::pair<std::string, std::string> recieve_amount = {this->recieve_addr, std::to_string(this->amount)};
+	std::ofstream ofschain;
+	this->data = recieve_amount.first + "/" + recieve_amount.second + "/" + this->send_addr;
+	mine_block();
+	if(this->previous_hash != "0") { // if it's the genesis block, no need to save since it already does it
+		index = std::to_string((int)jchain["blocks"]);
+		jchain[index][str_num]["hash"] = this->hash;
+		jchain[index][str_num]["nounce"] = this->nounce;
+		trans_num++;
+		if(trans_num != 4) {
+			jchain[index][std::to_string(trans_num)]["previous_hash"] = this->hash; // previous hash needs to be set
+		} else {
+			jchain[index]["success"] = true;
+		}
+		ofschain.open(blockchain::path);
+		ofschain << std::setw(4) << jchain << std::endl;
+		ofschain.close();
+	}
+	return jchain;
+}
+
+int block::add_block() {
 	nlohmann::json j, j_new;
 	if(this->previous_hash.empty()) {
 		return 1; // block data is not initialized
@@ -128,13 +147,13 @@ int block::add_block(){ // issue is that json is not correct
 		this->index = blockchain::block_number();
 		j = blockchain::blockchain_json();
 	}
-	std::pair<std::string, std::string> recieve_amount = {this->recieve_addr, std::to_string(this->amount)};
 	this->index++;
 	std::string index_str = std::to_string(this->index);
 	this->timestamp = get_timestamp();
-	this->data = recieve_amount.first + "/" + recieve_amount.second + "/" + this->send_addr + "/" + this->timestamp;
-	mine_block();
-	j_new = set_data(j, index_str);
+	if(this->previous_hash == "0") { // mining block only if genesis block because block only contains 1 transaction
+		mine_transaction(0);
+	}
+	j_new = set_finished_data(j, index_str);
  	std::ofstream ofChain(blockchain::path);
 	ofChain << std::setw(4) << j_new << std::endl; // beautify JSON data before writing to file
 	ofChain.close(); // might write a function for just opening/closing blockchain file

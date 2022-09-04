@@ -22,12 +22,13 @@ class block {
 		std::string verify_block();
 		int test_block();
 		int add_block();
+		nlohmann::json mine_transaction(int trans_num);
 		bool genesis;
 		
 	private:
 		std::string hash;
 		std::string previous_hash;
-		nlohmann::json set_data(nlohmann::json j, std::string json_str);
+		nlohmann::json set_finished_data(nlohmann::json j, std::string json_str);
 		int create_block_file(nlohmann::json j);
 
 };
