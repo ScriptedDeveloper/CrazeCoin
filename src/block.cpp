@@ -118,9 +118,11 @@ nlohmann::json block::mine_transaction(int trans_num) {
 	std::pair<std::string, std::string> recieve_amount = {this->recieve_addr, std::to_string(this->amount)};
 	std::ofstream ofschain;
 	this->data = recieve_amount.first + "/" + recieve_amount.second + "/" + this->send_addr;
-	mine_block();
+	std::cout << this->data << std::endl;
 	if(this->previous_hash != "0") { // if it's the genesis block, no need to save since it already does it
 		index = std::to_string((int)jchain["blocks"]);
+		this->timestamp = jchain[index][str_num]["timestamp"];
+		mine_block();
 		jchain[index][str_num]["hash"] = this->hash;
 		jchain[index][str_num]["nounce"] = this->nounce;
 		trans_num++;
@@ -132,7 +134,9 @@ nlohmann::json block::mine_transaction(int trans_num) {
 		ofschain.open(blockchain::path);
 		ofschain << std::setw(4) << jchain << std::endl;
 		ofschain.close();
+		return jchain;
 	}
+	mine_block();
 	return jchain;
 }
 

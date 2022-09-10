@@ -57,14 +57,9 @@ bool blockchain::is_empty(std::ifstream &ifS) {
 
 block blockchain::generate_genesis_block() {
 	block b("0", retrieve_addr(), "0", 20); // 20 coins will be sent to miner's wallet
+	b.timestamp = block::get_timestamp();
 	b.add_block();
 	return b;
-}
-
-int blockchain::add_block(nlohmann::json jblock) {
-	block b(get_previous_hash(false), jblock["recieve_addr"], jblock["send_addr"], jblock["amount"]);
-	b.add_block();
-	return 0;
 }
 
 std::string blockchain::retrieve_addr() {
@@ -85,7 +80,7 @@ int blockchain::check_chain() {
 	for(int i_block = 1; i_block <= blocks; i_block++) {
 		int trans_num = get_transaction_num(std::to_string(i_block));
 		for(int i_trans = 0; i_trans <= trans_num; i_trans++) {
-			if((nlohmann::json)broadcast::check_block(jchain[std::to_string(i_block)][std::to_string(i_trans)]) != 0) {
+			if(broadcast::check_block(jchain[std::to_string(i_block)][std::to_string(i_trans)]) != 0) {
 				return 1; // some block has failed the check, blockchain is compromised!
 			}
 		}

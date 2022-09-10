@@ -95,14 +95,13 @@ int broadcast::check_emergency_mode() {
 }
 
 int broadcast::check_block(nlohmann::json jblock) {
-	std::string hash = jblock["hash"];
 	std::pair<std::string, std::string> recieve_amount = {jblock["recieve_addr"], std::to_string((int)jblock["amount"])};
 	block b(jblock["previous_hash"], jblock["recieve_addr"], jblock["send_addr"], jblock["amount"]);
 	b.timestamp = jblock["timestamp"];
 	b.nounce = jblock["nounce"];
 	b.data = recieve_amount.first + "/" + recieve_amount.second + "/" + (std::string)jblock["send_addr"];
 	std::string hash_ = b.verify_block();
-	std::cout << (std::string)jblock["previous_hash"] + b.data + std::to_string(b.nounce) + b.timestamp << std::endl;
+	std::cout << b.data << std::endl;
 	if(hash_ != jblock["hash"]) {
 		return 1; // block is invalid and has been rejected
 	}
@@ -162,7 +161,7 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction) {
 		}
 	}
 	else {	
-		//try {	
+		try {	
 			if(!jchain[std::to_string(blocks_num)].contains("success") || jchain[std::to_string(blocks_num)]["success"] == false) {
 				if(blockchain::check_balances(jblock["send_addr"]) >= jblock["amount"]) { // checking whether wallet has enough coins
 					jblock.erase("signature");
@@ -174,10 +173,10 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction) {
 				save_block(jblock, false); // current block is full, creating a new one
 			}
 
-		//} catch(...) {
-		//return 1; // something horribly went wrong..
+		} catch(...) {
+			return 1; // something horribly went wrong..
 		}
-	
+	}
 	return 0;
 }
 
