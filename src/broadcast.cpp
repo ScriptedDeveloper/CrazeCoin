@@ -97,9 +97,13 @@ int broadcast::check_emergency_mode() {
 int broadcast::check_block(nlohmann::json jblock) {
 	std::pair<std::string, std::string> recieve_amount = {jblock["recieve_addr"], std::to_string((int)jblock["amount"])};
 	block b(jblock["previous_hash"], jblock["recieve_addr"], jblock["send_addr"], jblock["amount"]);
-	b.timestamp = jblock["timestamp"];
-	b.nounce = jblock["nounce"];
-	b.data = recieve_amount.first + "/" + recieve_amount.second + "/" + (std::string)jblock["send_addr"];
+	try {
+		b.timestamp = jblock["timestamp"];
+		b.nounce = jblock["nounce"];
+	} catch(...) {
+		return 0; // block is still unmined
+	}
+ 	b.data = recieve_amount.first + "/" + recieve_amount.second + "/" + (std::string)jblock["send_addr"];
 	std::string hash_ = b.verify_block();
 	std::cout << b.data << std::endl;
 	if(hash_ != jblock["hash"]) {
