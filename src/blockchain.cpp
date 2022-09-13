@@ -153,7 +153,7 @@ void blockchain::init_blockchain() {
 	if(broadcast::signup_peer() == 0) { // if server doesnt respond, skip
 		broadcast::get_peers(); // Connecting to other peers
 	}
-	if(blockchain::is_blockchain_empty() || blockchain::check_chain() == 1) { // checks also if blockchain is valid
+	if(blockchain::is_blockchain_empty() || check_chain() == 1) { // checks also if blockchain is valid
 		std::ofstream ofs(blockchain::path); // clearing blockchain content in case check_chain == 1
 		broadcast::recieve_chain(false);
 	} else {
