@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include <sstream>
 #include <fstream>
+#include <pthread.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <vector>
@@ -73,7 +74,7 @@ void broadcast::clear_peers() {
 
 void broadcast::fail_emergency_mode() {
 	std::cout << "(EMERGENCY MODE) No (pending) peers found, quitting!";
-	exit(1); // emergency mode has failed, quitting.
+	pthread_exit(NULL); // emergency mode has failed, quitting.
 }
 
 int broadcast::check_emergency_mode() {
@@ -127,13 +128,14 @@ int broadcast::add_transaction(nlohmann::json jtrans) { // adds transaction to b
 		i = blockchain::get_transaction_num(blocks_num);
 	}
 	if(i == blockchain::max_transactions) {
-		//j[blocks_num]["success"] = true;		
 		for(int i = 0; i <= 3; i++) {
 			std::string s_i = std::to_string(i);
 			block b_trans(j[blocks_num][s_i]["previous_hash"], j[blocks_num][s_i]["recieve_addr"], j[blocks_num][s_i]["send_addr"], j[blocks_num][s_i]["amount"]);
 			j = b_trans.mine_transaction(i);
 		}
-		return 0;
+		jtrans["previous_hash"] = blockchain::get_previous_hash(true);
+		blocks_num = std::to_string(blockchain::block_number() + 1);
+		i = 0;
 	}
 	i++;
 	j[blocks_num][std::to_string(i)] = jtrans;
@@ -288,7 +290,7 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction) {
 		j = j.parse(ifs); // checking if is valid json
 	} catch(...) {
 		std::cout << ifs.rdbuf();
-		exit(1); // parsing block(chain) failed
+		pthread_exit(NULL); // parsing block(chain) failed
 	}
 	std::ifstream ifs_obj(filename);
 	std::stringstream ss_chain;

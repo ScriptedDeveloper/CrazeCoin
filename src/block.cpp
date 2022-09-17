@@ -121,8 +121,10 @@ nlohmann::json block::mine_transaction(int trans_num) {
 	std::cout << this->data << std::endl;
 	if(this->previous_hash != "0") { // if it's the genesis block, no need to save since it already does it
 		index = std::to_string((int)jchain["blocks"]);
+		this->merkle_root = jchain["merkle_root"];
 		this->timestamp = jchain[index][str_num]["timestamp"];
 		mine_block();
+		jchain["merkle_root"] = generate_hash(this->merkle_root + this->hash);
 		jchain[index][str_num]["hash"] = this->hash;
 		jchain[index][str_num]["nounce"] = this->nounce;
 		trans_num++;

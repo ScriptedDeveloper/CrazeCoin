@@ -108,7 +108,7 @@ int blockchain::check_balances(std::string addr) {
 				balance = jchain[str_i][str_transnum]["amount"];
 			} else if(jchain[str_i][str_transnum]["send_addr"] == addr && balance == -1) {
 				std::cout << "[SYSTEM] Error! Blockchain is invalid! Address " << addr << " is sending coins without having coins!" << std::endl;
-				exit(1); // balance is not initialized, blockchain is corrupted!
+				pthread_exit(NULL); // balance is not initialized, blockchain is corrupted!
 			} else if(jchain[str_i][str_transnum]["send_addr"] == addr) {
 				balance = balance - (int)jchain[str_i][str_transnum]["amount"];
 			}
@@ -149,7 +149,7 @@ std::pair<bool, nlohmann::json> blockchain::verify_transaction(nlohmann::json j)
 }
 
 void blockchain::init_blockchain() {
-	//generate_genesis_block();
+	generate_genesis_block();
 	if(broadcast::signup_peer() == 0) { // if server doesnt respond, skip
 		broadcast::get_peers(); // Connecting to other peers
 	}
@@ -158,13 +158,11 @@ void blockchain::init_blockchain() {
 		broadcast::recieve_chain(false);
 	} else {
 		while(true) {
-			broadcast::recieve_chain(true);
-			/*
+			//broadcast::recieve_chain(true);
 			std::thread broadcaster(broadcast::send_chain, true, false); // is original peer/miner, broadcasting blockchain
 			std::thread transaction_recieve(broadcast::recieve_chain, true); // changing for debugging
 			broadcaster.join();
 			transaction_recieve.join();
-			*/
 		}
 	}
 }
@@ -182,7 +180,7 @@ std::string blockchain::get_previous_hash(bool last_block) {
 		jchain = jchain.parse(ifschain);
 	} catch(...) {
 		std::cout << "Blockchain is corrupted!" << std::endl;
-		exit(1); // somethings wrong with the blockchain
+		pthread_exit(NULL); // somethings wrong with the blockchain
 	}
 	std::string block_num = std::to_string((int)jchain["blocks"]);
 	std::string trans_num = std::to_string(get_transaction_num(std::to_string((int)jchain["blocks"])));
