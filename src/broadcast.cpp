@@ -253,9 +253,8 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 		}
 		ifsblock.open(blockchain::path);
 		if(blockchain::is_empty(ifsblock)) {
-			ifsblock.close();
-			ofsBlock.open(blockchain::path);
-			continue;
+			std::ofstream ofschain(blockchain::path);
+			ofschain << str_buff;
 		} else {
 			if(save_block(jblock, true) != 0) {
 				return 1; // either invalid json or manipulated block

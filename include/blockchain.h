@@ -17,6 +17,7 @@ namespace blockchain {
 	int check_chain();
 	int get_transaction_num(std::string block_num);
 	std::string get_previous_hash(bool last_block);
+	std::string blockchain_raw();
 	int check_balances(std::string addr);
 	int add_block(nlohmann::json jblock);
 	void init_blockchain();

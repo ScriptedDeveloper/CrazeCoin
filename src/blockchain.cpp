@@ -69,14 +69,28 @@ std::string blockchain::retrieve_addr() {
 	return ss_addr.str();
 }
 
+std::string blockchain::blockchain_raw() {
+	std::stringstream bchain;
+	std::ifstream ofschain(blockchain::path);
+	bchain << ofschain.rdbuf();
+	return bchain.str();
+}
+
 bool blockchain::is_blockchain_empty() {
 	std::ifstream ifschain(blockchain::path);
 	return (bool)is_empty(ifschain);
 }
 
 int blockchain::check_chain() {
-	nlohmann::json jchain = blockchain::blockchain_json();
-	int blocks = jchain["blocks"];
+	nlohmann::json jchain;
+	int blocks;
+	try {
+		jchain = blockchain_json();
+		blocks = jchain["blocks"];
+	} catch(...) {
+		jchain = broadcast::raw_to_json(blockchain_raw());
+		blocks = jchain["blocks"];
+	}
 	for(int i_block = 1; i_block <= blocks; i_block++) {
 		int trans_num = get_transaction_num(std::to_string(i_block));
 		for(int i_trans = 0; i_trans <= trans_num; i_trans++) {
@@ -149,7 +163,6 @@ std::pair<bool, nlohmann::json> blockchain::verify_transaction(nlohmann::json j)
 }
 
 void blockchain::init_blockchain() {
-	generate_genesis_block();
 	if(broadcast::signup_peer() == 0) { // if server doesnt respond, skip
 		broadcast::get_peers(); // Connecting to other peers
 	}
@@ -158,11 +171,12 @@ void blockchain::init_blockchain() {
 		broadcast::recieve_chain(false);
 	} else {
 		while(true) {
+			broadcast::send_chain(true, false);
 			//broadcast::recieve_chain(true);
-			std::thread broadcaster(broadcast::send_chain, true, false); // is original peer/miner, broadcasting blockchain
-			std::thread transaction_recieve(broadcast::recieve_chain, true); // changing for debugging
-			broadcaster.join();
-			transaction_recieve.join();
+			//std::thread broadcaster(broadcast::send_chain, true, false); // is original peer/miner, broadcasting blockchain
+			//std::thread transaction_recieve(broadcast::recieve_chain, true); // changing for debugging
+			//broadcaster.join();
+			//transaction_recieve.join();
 		}
 	}
 }
@@ -242,3 +256,4 @@ int blockchain::check_transaction_format(std::string format, nlohmann::json j) {
 	return 0;
 }
 */
+
