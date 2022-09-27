@@ -175,6 +175,7 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction) {
 				}
 			} 
 			else {
+				sleep(20); // 20 secs timeout for broadcasting current state of blockchain
 				save_block(jblock, false); // current block is full, creating a new one
 			}
 
@@ -271,6 +272,7 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction) {
 	int opt = 1, new_socket, server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	std::string filename; // getting filename to reopen after JSON parse function closes file
 	std::ifstream ifs;
+	nlohmann::json j;
 	if(broadcast::check_emergency_mode() == -1 && !is_transaction) {
 		broadcast::fail_emergency_mode(); // same as recieve_chain
 	}
@@ -285,11 +287,16 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction) {
 		ifs.open(filename);
 	}
 	try {
-		nlohmann::json j;
 		j = j.parse(ifs); // checking if is valid json
 	} catch(...) {
 		std::cout << ifs.rdbuf();
 		pthread_exit(NULL); // parsing block(chain) failed
+	}
+	if(filename == blockchain::path) {
+		if(!j[std::to_string((int)j["blocks"])]["success"]) {
+			sleep(20); // retrying in 20 seconds since block hasnt been mined yet
+			return 1;
+		}	 
 	}
 	std::ifstream ifs_obj(filename);
 	std::stringstream ss_chain;
