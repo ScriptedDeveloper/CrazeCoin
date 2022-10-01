@@ -36,7 +36,7 @@ namespace blockchain {
 	const std::string path = std::experimental::filesystem::current_path().u8string() + "/blockchain.json";
 	const std::string peer_path = std::experimental::filesystem::current_path().u8string() + "/peers.json";
 	const std::string addr_path = std::experimental::filesystem::current_path().u8string() + "/address.bin";
-	const std::string peer_tracker = "192.168.10.101:6882"; // changing later to correct domain
+	const std::string peer_tracker = "192.168.178.51:6882"; // changing later to correct domain
 	const int max_transactions = 3; // max transactions in a block
 }
 

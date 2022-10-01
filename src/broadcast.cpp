@@ -189,14 +189,16 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction) {
 nlohmann::json broadcast::raw_to_json(std::string raw){
 	nlohmann::json j_data;
 	int retries = 0;
-	while(true) {
-		try {	
-			j_data = j_data.parse(raw);
-			break;
-		} catch(...) {
-			raw.pop_back(); // trying to remove garbage character and try again
-			if(retries == 400) {
-				return 1; // parsing failed, char array is not valid JSON
+	if(!raw.empty()) {
+		while(true) {
+			try {	
+				j_data = j_data.parse(raw);
+				break;
+			} catch(...) {
+				raw.pop_back(); // trying to remove garbage character and try again
+				if(retries == 400) {
+					return 1; // parsing failed, char array is not valid JSON
+				}
 			}
 		}
 	}
