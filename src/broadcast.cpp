@@ -37,6 +37,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 void broadcast::error_handler(std::string message) {
 	std::cout << "Failed at : " << message << std::endl;
+	std::string error = strerror(errno);
+	if(error == "Transport endpoint is already connected") {
+		pthread_exit(NULL);
+	}
 	std::cout << strerror(errno) << std::endl;
 	sleep(3);
 }
