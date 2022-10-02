@@ -99,7 +99,7 @@ int wallet::send(char **argv) {
 	jtransaction["signature_len"] = signature.size();
 	jtransaction["signature"] = ss_signature.str(); // reading signature from file, parsing it into stringbuffer and turning it into string
 	create_transaction_json(jtransaction);
-	 broadcast::send_transaction();
+	broadcast::send_transaction();
 	// having to sign, and broadcast transaction to network
 	return 0;
 }

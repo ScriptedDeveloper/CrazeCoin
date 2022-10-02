@@ -36,6 +36,7 @@ namespace blockchain {
 	const std::string path = std::experimental::filesystem::current_path().u8string() + "/blockchain.json";
 	const std::string peer_path = std::experimental::filesystem::current_path().u8string() + "/peers.json";
 	const std::string addr_path = std::experimental::filesystem::current_path().u8string() + "/address.bin";
+	const std::string block_path = std::experimental::filesystem::current_path().u8string() + "/block.json";
 	const std::string peer_tracker = "192.168.178.51:6882"; // changing later to correct domain
 	const int max_transactions = 3; // max transactions in a block
 }
@@ -168,7 +169,7 @@ void blockchain::init_blockchain() {
 	} else {
 		while(true) {
 			//broadcast::send_chain(true, false);
-			std::thread broadcaster(broadcast::send_chain, true, false); // is original peer/miner, broadcasting blockchain
+			std::thread broadcaster(broadcast::send_chain, true, false, ""); // is original peer/miner, broadcasting blockchain
 			std::thread transaction_recieve(broadcast::recieve_chain, true); // changing for debugging
 			broadcaster.join();
 			transaction_recieve.join();

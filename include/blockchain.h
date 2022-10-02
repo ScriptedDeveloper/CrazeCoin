@@ -7,6 +7,7 @@
 namespace blockchain {
 	extern const std::string path;
 	extern const std::string peer_path;
+	extern const std::string block_path;
 	extern const std::string peer_tracker;
 	extern const int max_transactions;
 	block generate_genesis_block();	

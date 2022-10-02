@@ -165,6 +165,7 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction) {
 		try {
 			blocks_num++;
 			b.add_block();
+			broadcast_block(jblock.dump());
 		} catch(nlohmann::json::parse_error) {
 			return 1; // block is invalid json
 		}
@@ -179,11 +180,12 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction) {
 				}
 			} 
 			else {
-				sleep(20); // 20 secs timeout for broadcasting current state of blockchain
+				//sleep(20); // 20 secs timeout for broadcasting current state of blockchain
 				save_block(jblock, false); // current block is full, creating a new one
 			}
 
 		} catch(...) {
+			throw;
 			return 1; // something horribly went wrong..
 		}
 	}
@@ -207,6 +209,19 @@ nlohmann::json broadcast::raw_to_json(std::string raw){
 		}
 	}
 	return j_data;
+}
+
+int broadcast::broadcast_block(std::string block) {
+	std::ifstream ifspeer(blockchain::peer_path);
+	nlohmann::json jpeer = jpeer.parse(ifspeer);
+	for(std::string ip : jpeer["peers"]) {
+		if(ip != "192.168.178.113") {
+			std::ofstream ofsblock(blockchain::block_path);
+			ofsblock << block;
+			broadcast::send_chain(false, true, ip);
+		}
+	}
+	return 0;
 }
 
 int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable for miners to verify transaction and append to blockchain
@@ -273,7 +288,7 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 }
 
 
-int broadcast::send_chain(bool is_blockchain, bool is_transaction) {
+int broadcast::send_chain(bool is_blockchain, bool is_transaction, std::string ip) {
 	struct sockaddr_in sockaddr;
 	int opt = 1, new_socket, server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	std::string filename; // getting filename to reopen after JSON parse function closes file
@@ -309,10 +324,14 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction) {
 	ss_chain << ifs_obj.rdbuf(); // putting transaction into raw stringstream format since nlohmann::json::dump is behaving incorrectly
 	std::string json_str = ss_chain.str();
 	std::string next_peer;
-	if(!is_transaction && is_blockchain){
-		next_peer = retrieve_pending(0); // declaring var only if its a miner broadcasting blockchain
+	if(ip.empty()) {
+		if(!is_transaction && is_blockchain){
+			next_peer = retrieve_pending(0); // declaring var only if its a miner broadcasting blockchain
+		} else {
+			next_peer = retrieve_peer(0);
+		}
 	} else {
-		next_peer = retrieve_peer(0);
+		next_peer = ip;
 	}
 	/*if(check_node(retrieve_peer(0)) == 1) { Thanks to ISP only 1 IP for all devices!
 		next_peer = retrieve_peer(1);
