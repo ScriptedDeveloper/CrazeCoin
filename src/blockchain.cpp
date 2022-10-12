@@ -163,9 +163,10 @@ void blockchain::init_blockchain() {
 	if(broadcast::signup_peer() == 0) { // if server doesnt respond, skip
 		broadcast::get_peers(); // Connecting to other peers
 	}
-	if(blockchain::is_blockchain_empty() || check_chain() == 1) { // checks also if blockchain is valid
+	if(is_blockchain_empty() || check_chain() == 1) { // checks also if blockchain is valid
 		std::ofstream ofs(blockchain::path); // clearing blockchain content in case check_chain == 1
 		broadcast::recieve_chain(false);
+		init_blockchain();
 	} else {
 		while(true) {
 			//broadcast::send_chain(true, false);
@@ -195,9 +196,9 @@ std::string blockchain::get_previous_hash(bool last_block) {
 	std::string block_num = std::to_string((int)jchain["blocks"]);
 	std::string trans_num = std::to_string(get_transaction_num(std::to_string((int)jchain["blocks"])));
 	if(last_block) {
-		return jchain[std::to_string((int)jchain["blocks"])][trans_num]["hash"];
+		return jchain[block_num][trans_num]["hash"];
 	}
-	return jchain[std::to_string((int)jchain["blocks"])][trans_num]["previous_hash"];
+	return jchain[block_num][trans_num]["previous_hash"];
 }
 
 void blockchain::check_files() {

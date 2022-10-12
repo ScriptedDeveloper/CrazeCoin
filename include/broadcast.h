@@ -11,6 +11,7 @@ namespace broadcast {
 	int recieve_chain(bool is_transaction);
 	int send_transaction();
 	int signup_peer();
+	int unsign_pend_peer();
 	int add_transaction(nlohmann::json jtrans);
 	int broadcast_block(std::string block);
 	int save_block(nlohmann::json jblock, bool is_transaction);

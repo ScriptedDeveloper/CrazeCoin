@@ -99,6 +99,17 @@ int broadcast::check_emergency_mode() {
 	return 0;
 }
 
+int broadcast::unsign_pend_peer() { // unsigns pending peer and signs up as a miner
+	cpr::Response r_unsign = cpr::Get(cpr::Url{blockchain::peer_tracker + "/unsign_pend_peer"});
+	if(r_unsign.status_code == 200) {
+		cpr::Response r_signup = cpr::Get(cpr::Url{blockchain::peer_tracker + "/add_peer"});
+		if(r_unsign.status_code == 200) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
 int broadcast::check_block(nlohmann::json jblock) {
 	if(!jblock.contains("nounce")) {
 		return 0; // block is still unmined
@@ -192,7 +203,7 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction) {
 	return 0;
 }
 
-nlohmann::json broadcast::raw_to_json(std::string raw){
+nlohmann::json broadcast::raw_to_json(std::string raw) {
 	nlohmann::json j_data;
 	int retries = 0;
 	if(!raw.empty()) {
@@ -282,6 +293,7 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 				return 1; // either invalid json or manipulated block
 			}
 		}
+		unsign_pend_peer();
 		break;
 	} while(true);
 	return 0;

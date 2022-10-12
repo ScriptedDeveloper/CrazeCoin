@@ -14,6 +14,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from flask import request, jsonify
+from json import dumps
 import webserver, json, os
 
 def recover_format():
@@ -26,10 +27,23 @@ class API:
     def __init__(self):
         self.peers_json = json.load(open("peers.json", "r"))
 
+    def save_peerlist(self):
+        open("peers.json", "w").write(dumps(self.peers_json)) # updating peer_json for other funcs
+
     def check_peer(self, peer):
         for peer in self.peers_json["peers"]:
             if peer == request.remote_addr:
                 return False
+        return True # Returning true if not in JSON file
+ 
+    def check_pend_peer(self, peer, remove = False):
+        it = 0
+        for peer in self.peers_json["pending_peers"]:
+            if peer == request.remote_addr:
+                if remove:
+                    self.peers_json["pending_peers"].pop(it)
+                return False
+            it += 1
         return True # Returning true if not in JSON file
  
     def check_pending(self, pend_miner):
@@ -45,7 +59,7 @@ class API:
         self.peers_json["peer_amount"] += 1
         self.peers_json["peers"].append(str(request.remote_addr))
         open("peers.json", "w").write(json.dumps(self.peers_json)) # dumping all changes to file
-        self.peers_json = json.load(open("peers.json", "r"))       # updating peer_json for other funcs
+        self.save_peerlist()
         return jsonify({"status" : 200, "message" : "SUCCESS"}) 
  
     def add_pending_peer(self): # same code as add_peer() with minor changes
@@ -53,7 +67,14 @@ class API:
             return jsonify({"status" : 203, "message" : "SIGNED"})
         self.peers_json["pending_peers"].append(str(request.remote_addr))
         open("peers.json", "w").write(json.dumps(self.peers_json))
-        self.peers_json = json.load(open("peers.json", "r"))
+        self.save_peerlist()
+        return jsonify({"status" : 200, "message" : "SUCCESS"})
+
+    def remove_pending_peer(self):
+        if self.check_pend_peer(request.remote_addr, True) == True:
+            return jsonify({"status" : "203", "message" : "UNKNOWN"})
+        self.peers_json["peer_amount"] -= 1
+        self.save_peerlist()
         return jsonify({"status" : 200, "message" : "SUCCESS"})
 
     def get_peers(self):
@@ -69,4 +90,4 @@ if(__name__ == '__main__'):
     recover_format()
     webserver.server().start() 
         
-    
+ 
