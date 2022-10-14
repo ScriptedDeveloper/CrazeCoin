@@ -176,7 +176,7 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction) {
 		try {
 			blocks_num++;
 			b.add_block();
-			broadcast_block(jblock.dump());
+			broadcast_block(std::to_string(blocks_num--));
 		} catch(nlohmann::json::parse_error) {
 			return 1; // block is invalid json
 		}
@@ -208,14 +208,18 @@ nlohmann::json broadcast::raw_to_json(std::string raw) {
 	int retries = 0;
 	if(!raw.empty()) {
 		while(true) {
-			try {	
-				j_data = j_data.parse(raw);
-				break;
-			} catch(...) {
-				raw.pop_back(); // trying to remove garbage character and try again
-				if(retries == 400) {
-					return 1; // parsing failed, char array is not valid JSON
+			try {
+				try {	
+					j_data = j_data.parse(raw);
+					break;
+				} catch(...) {
+					raw.pop_back(); // trying to remove garbage character and try again
+					if(retries == 400) {
+						return 1; // parsing failed, char array is not valid JSON
+					}
 				}
+			} catch(...) {
+				return 1;
 			}
 		}
 	}
@@ -270,7 +274,7 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 		read(isocket, buff, 1024);
 		buff_size = std::atol(buff); // getting buffer size for real blockchain
 		char buffchain[buff_size];
-		read(isocket, buffchain, buff_size);
+		recv(isocket, buffchain, buff_size, MSG_WAITALL);
 		std::string str_buff(buffchain);
 		nlohmann::json jblock;
 		if(is_transaction) {

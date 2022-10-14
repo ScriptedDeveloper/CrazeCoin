@@ -42,7 +42,7 @@ namespace blockchain {
 }
 
 int blockchain::get_transaction_num(std::string block_num) { // gets transaction number in block
-	nlohmann::json jchain = blockchain_json();	
+	nlohmann::json jchain = blockchain_json();
 	int i = 0;
 	std::string str = jchain.dump();
 	for(auto elm : jchain[block_num].items()) { // problem here
@@ -84,6 +84,9 @@ bool blockchain::is_blockchain_empty() {
 
 int blockchain::check_chain() {
 	nlohmann::json jchain = blockchain_json();
+	if(jchain == 1) {
+		return 1;
+	}
 	int blocks = jchain["blocks"];
 	for(int i_block = 1; i_block <= blocks; i_block++) {
 		int trans_num = get_transaction_num(std::to_string(i_block));
