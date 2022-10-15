@@ -14,10 +14,32 @@ namespace broadcast {
 	int unsign_pend_peer();
 	int add_transaction(nlohmann::json jtrans);
 	int broadcast_block(std::string block);
-	int save_block(nlohmann::json jblock, bool is_transaction);
+	int save_block(nlohmann::json jblock, bool is_transaction, bool is_recieved_block);
 	int check_emergency_mode();
 	int peers_empty();
-	nlohmann::json raw_to_json(std::string raw);
+	template<typename input>
+	nlohmann::json raw_to_json(input raw) {
+		nlohmann::json j_data;
+		int retries = 0;
+		if(!raw.empty()) {
+			while(true) {
+				try {
+					try {	
+						j_data = j_data.parse(raw);
+						break;
+					} catch(...) {
+						raw.pop_back(); // trying to remove garbage character and try again
+						if(retries == 400) {
+							return 1; // parsing failed, char array is not valid JSON
+						}
+					}
+				} catch(...) {
+					return 1;
+				}
+			}
+		}
+		return j_data;
+	}
 	void clear_peers();
 	void error_handler(std::string message);
 	void fail_emergency_mode();

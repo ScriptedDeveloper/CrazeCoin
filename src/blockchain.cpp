@@ -148,6 +148,9 @@ std::pair<bool, nlohmann::json> blockchain::verify_transaction(nlohmann::json j)
 	std::string amount = std::to_string((int)j["amount"]);
 	std::string reciever = j["recieve_addr"];
 	std::string data = reciever + "/" + amount + "/" + (std::string)j["send_addr"] + "/" + timestamp;
+	if(j["0"].contains("hash")) {
+		return {true, j}; // is block, wrong function
+	}
 	for(int i = 0; i < hex_vector.size(); i++) {
 		raw_vector.push_back(rsa_wrapper::raw_hex_decode(j[hex_vector[i]]));
 	}
@@ -162,6 +165,7 @@ std::pair<bool, nlohmann::json> blockchain::verify_transaction(nlohmann::json j)
 }
 
 void blockchain::init_blockchain() {
+	/*
 	generate_genesis_block();
 	if(broadcast::signup_peer() == 0) { // if server doesnt respond, skip
 		broadcast::get_peers(); // Connecting to other peers
@@ -179,6 +183,9 @@ void blockchain::init_blockchain() {
 			transaction_recieve.join();
 		}
 	}
+	*/
+	nlohmann::json j = blockchain_json();
+	broadcast::broadcast_block(j["2"].dump());
 }
 
 void blockchain::create_json(std::string name) {

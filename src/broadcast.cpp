@@ -156,15 +156,18 @@ int broadcast::add_transaction(nlohmann::json jtrans) { // adds transaction to b
 	j[blocks_num][std::to_string(i)] = jtrans;
 	ofchain = std::ofstream(blockchain::path);
 	ofchain << std::setw(4) << j << std::endl;
+	if(i == blockchain::max_transactions) {
+		broadcast_block(j[blocks_num].dump());
+
+	}
 	return 0;
 }
 
-int broadcast::save_block(nlohmann::json jblock, bool is_transaction) {
+int broadcast::save_block(nlohmann::json jblock, bool is_transaction, bool is_recieved_block) {
 	std::ofstream ofchain;	
 	nlohmann::json jchain = blockchain::blockchain_json();
 	int blocks_num = blockchain::block_number();
-	std::string addr = jblock["recieve_addr"];
-	if(!is_transaction) {
+	if(!is_transaction && !is_recieved_block) {
 		block b(blockchain::get_previous_hash(true), jblock["recieve_addr"], jblock["send_addr"], jblock["amount"]);
 		try {
 			if(check_block(jblock) != 0) {
@@ -176,23 +179,30 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction) {
 		try {
 			blocks_num++;
 			b.add_block();
-			broadcast_block(std::to_string(blocks_num--));
 		} catch(nlohmann::json::parse_error) {
 			return 1; // block is invalid json
 		}
-	}
-	else {	
+	} else if(is_recieved_block) {
+		for(int i = 1; i < blockchain::max_transactions; i++) {
+			if(!blockchain::verify_transaction(jblock[std::to_string(i)]).first) {
+				return 1;
+			}
+		}
+		jchain["blocks"] = (int)jchain["blocks"] + 1;
+		jchain[std::to_string((int)jchain["blocks"])] = jblock;
+		std::ofstream ofschain(blockchain::path);
+		ofschain << std::setw(4) << jchain;
+		return 0;
+	} else {	
 		try {	
 			if(!jchain[std::to_string(blocks_num)].contains("success") || jchain[std::to_string(blocks_num)]["success"] == false) {
 				if(blockchain::check_balances(jblock["send_addr"]) >= jblock["amount"]) { // checking whether wallet has enough coins
-					jblock.erase("signature");
-					jblock.erase("signature_len"); // unneeded since sender/reciever addr is added into hash and signature has already been verifed
 					add_transaction(jblock);
 				}
 			} 
 			else {
 				//sleep(20); // 20 secs timeout for broadcasting current state of blockchain
-				save_block(jblock, false); // current block is full, creating a new one
+				save_block(jblock, false, false); // current block is full, creating a new one
 			}
 
 		} catch(...) {
@@ -203,29 +213,6 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction) {
 	return 0;
 }
 
-nlohmann::json broadcast::raw_to_json(std::string raw) {
-	nlohmann::json j_data;
-	int retries = 0;
-	if(!raw.empty()) {
-		while(true) {
-			try {
-				try {	
-					j_data = j_data.parse(raw);
-					break;
-				} catch(...) {
-					raw.pop_back(); // trying to remove garbage character and try again
-					if(retries == 400) {
-						return 1; // parsing failed, char array is not valid JSON
-					}
-				}
-			} catch(...) {
-				return 1;
-			}
-		}
-	}
-	return j_data;
-}
-
 int broadcast::broadcast_block(std::string block) {
 	std::ifstream ifspeer(blockchain::peer_path);
 	nlohmann::json jpeer = jpeer.parse(ifspeer);
@@ -233,7 +220,7 @@ int broadcast::broadcast_block(std::string block) {
 		if(ip != "192.168.178.113") {
 			std::ofstream ofsblock(blockchain::block_path);
 			ofsblock << block;
-			broadcast::send_chain(false, true, ip);
+			send_chain(false, false, ip);
 		}
 	}
 	return 0;
@@ -276,7 +263,15 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 		char buffchain[buff_size];
 		recv(isocket, buffchain, buff_size, MSG_WAITALL);
 		std::string str_buff(buffchain);
-		nlohmann::json jblock;
+		nlohmann::json jblock = raw_to_json(str_buff);
+		if(jblock.contains(("success")) && !blockchain::is_blockchain_empty()) {
+			if(jblock["success"]) {
+				if(save_block(jblock, false, true) != 0) {
+					return 1;
+				}
+				return 0;
+			}
+		}
 		if(is_transaction) {
 			try {
 				std::pair<bool, nlohmann::json> return_val = blockchain::verify_transaction(raw_to_json(str_buff)); // attempting to add transaction
@@ -289,11 +284,15 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 			}
 		}
 		ifsblock.open(blockchain::path);
-		if(blockchain::is_empty(ifsblock)) {
+		if(blockchain::is_blockchain_empty()) {
 			std::ofstream ofschain(blockchain::path);
 			ofschain << str_buff;
+		} else if(jblock.contains("success")) {
+			if(jblock["success"]) {
+				save_block(jblock, false, true);
+			}
 		} else {
-			if(save_block(jblock, true) != 0) {
+			if(save_block(jblock, true, false) != 0) {
 				return 1; // either invalid json or manipulated block
 			}
 		}
@@ -310,7 +309,7 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction, std::string i
 	std::string filename; // getting filename to reopen after JSON parse function closes file
 	std::ifstream ifs;
 	nlohmann::json j;
-	if(broadcast::check_emergency_mode() == -1 && !is_transaction) {
+	if(broadcast::check_emergency_mode() == -1 && !is_transaction && ip.empty()) {
 		broadcast::fail_emergency_mode(); // same as recieve_chain
 	}
 	if(is_blockchain) {
