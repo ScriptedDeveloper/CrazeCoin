@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/socket.h>
 #include <unistd.h>
 #include <vector>
+#include <random>
 #include <thread>
 #include <future>
 #include <arpa/inet.h>
@@ -403,7 +404,7 @@ int broadcast::signup_peer() {
 	return 0;
 }
 
-int broadcast::get_peers() {
+std::pair<int, nlohmann::json> broadcast::get_peers() {
 	std::ifstream ifsPeer(blockchain::peer_path);
 	nlohmann::json jpeers, jpending, j;	
 	cpr::Response rpeer, rpending, ramount;
@@ -429,7 +430,7 @@ int broadcast::get_peers() {
 	} while(response_vec[0].status_code != 200 || response_vec[2].status_code != 200 || text_vec[0] == "{}" || text_vec[2] == "1"); // checking in case the list of peers/pending peers are empty
 	if(retrieves >= 3) {
 		std::cout << "[SYSTEM] Connecting to peer server failed! Opting to emergency mode..." << std::endl;
-		return 1;
+		return {1, 0};
 	}
 	jpeers = jpeers.parse(text_vec[0]);
 	jpending = jpending.parse(text_vec[1]);
@@ -439,15 +440,35 @@ int broadcast::get_peers() {
 	ofsPeer << j.dump() << std::endl;
 	ifsPeer.close();
 	ofsPeer.close();
-	return 0;
+	return {0, j};
 }
 
 int broadcast::send_transaction() {
-	get_peers(); // getting peers to connect with
-	if(send_chain(false, true) == 1){ // broadcasting transaction to network
-		return 1; // broadcast failed, aborting
-	} 	
-	return 0;
+	int peer_amount, rand_number;
+	std::random_device rd;
+	std::uniform_int_distribution<int> rand;
+	std::mt19937 mt(rd());	
+	cpr::Response peer = cpr::Get(cpr::Url{blockchain::peer_tracker + "/peers"});
+	peer_amount = std::stoi(peer.text); // getting amount of peers for picking random peer
+	if(peer_amount > 0) {
+		rand = std::uniform_int_distribution<int>(0, peer_amount--);
+		rand_number = rand(rd);
+	} else {
+		rand_number = 0; // peer_amount is already 0, no need to bother
+	}
+	std::pair<int, nlohmann::json> peers = get_peers(); // getting peers to connect with
+	if(peers.first == 0) {	
+		if(rand_number > peer_amount) {
+			send_transaction(); // trying again, preventing segfault
+		}
+		std::vector<std::string> peer_vec = peers.second["peers"];
+		if(send_chain(false, true, peer_vec[rand_number]) == 1){ // broadcasting transaction to network
+			return 1; // broadcast failed, aborting
+		} 
+		return 0;
+	}
+	
+	return 1;
 }
 /*
 int get_peers() {

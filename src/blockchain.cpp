@@ -166,7 +166,6 @@ std::pair<bool, nlohmann::json> blockchain::verify_transaction(nlohmann::json j)
 
 void blockchain::init_blockchain() {
 	/*
-	generate_genesis_block();
 	if(broadcast::signup_peer() == 0) { // if server doesnt respond, skip
 		broadcast::get_peers(); // Connecting to other peers
 	}

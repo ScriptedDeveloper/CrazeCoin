@@ -6,7 +6,7 @@ namespace broadcast {
 	std::string retrieve_pending(int n);
 	int check_block(nlohmann::json jblock);
 	int connect_network();
-	int get_peers();
+	std::pair<int, nlohmann::json> get_peers();
 	int send_chain(bool is_blockchain, bool is_transaction, std::string ip = "");
 	int recieve_chain(bool is_transaction);
 	int send_transaction();
