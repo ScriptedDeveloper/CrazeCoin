@@ -68,7 +68,10 @@ std::string broadcast::retrieve_pending(int n) { // same as retrieve_peer with s
 	} catch(nlohmann::detail::parse_error) {
 		blockchain::init_blockchain();
 	}
-	return j["pending_peers"][n]; // instead of peers, returning pending_peers
+	if(!j["pending_peers"].empty()) {
+		return j["pending_peers"][n]; // instead of peers, returning pending_peers
+	}
+	return "";
 }
 
 void broadcast::clear_peers() { 
@@ -77,9 +80,9 @@ void broadcast::clear_peers() {
 	ofs.close();
 }
 
-void broadcast::fail_emergency_mode() {
+int broadcast::fail_emergency_mode() {
 	std::cout << "(EMERGENCY MODE) No (pending) peers found, quitting!";
-	pthread_exit(NULL); // emergency mode has failed, quitting.
+	return 0; // emergency mode has failed, quitting.
 }
 
 int broadcast::check_emergency_mode() {
@@ -143,6 +146,10 @@ int broadcast::add_transaction(nlohmann::json jtrans) { // adds transaction to b
 	if(!first_time) {
 		i = blockchain::get_transaction_num(blocks_num);
 	}
+	i++;
+	j[blocks_num][std::to_string(i)] = jtrans;
+	ofchain = std::ofstream(blockchain::path);
+	ofchain << std::setw(4) << j << std::endl;
 	if(i == blockchain::max_transactions) {
 		for(int i = 0; i <= 3; i++) {
 			std::string s_i = std::to_string(i);
@@ -150,16 +157,9 @@ int broadcast::add_transaction(nlohmann::json jtrans) { // adds transaction to b
 			j = b_trans.mine_transaction(i);
 		}
 		jtrans["previous_hash"] = blockchain::get_previous_hash(true);
-		blocks_num = std::to_string(blockchain::block_number() + 1);
+		blocks_num = std::to_string(blockchain::block_number());
 		i = 0;
-	}
-	i++;
-	j[blocks_num][std::to_string(i)] = jtrans;
-	ofchain = std::ofstream(blockchain::path);
-	ofchain << std::setw(4) << j << std::endl;
-	if(i == blockchain::max_transactions) {
 		broadcast_block(j[blocks_num].dump());
-
 	}
 	return 0;
 }
@@ -343,6 +343,9 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction, std::string i
 	if(ip.empty()) {
 		if(!is_transaction && is_blockchain){
 			next_peer = retrieve_pending(0); // declaring var only if its a miner broadcasting blockchain
+			if(next_peer.empty()) {
+				return 1; // no pending peer found
+			}
 		} else {
 			next_peer = retrieve_peer(0);
 		}
@@ -449,7 +452,7 @@ int broadcast::send_transaction() {
 	std::uniform_int_distribution<int> rand;
 	std::mt19937 mt(rd());	
 	cpr::Response peer = cpr::Get(cpr::Url{blockchain::peer_tracker + "/peers"});
-	peer_amount = std::stoi(peer.text); // getting amount of peers for picking random peer
+	peer_amount = std::stoi(peer.text); // getting amount of peers for picking random peer PROBLEM : need to find way to send transaction when peer tracker not available
 	if(peer_amount > 0) {
 		rand = std::uniform_int_distribution<int>(0, peer_amount--);
 		rand_number = rand(rd);

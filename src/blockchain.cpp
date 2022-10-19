@@ -165,7 +165,7 @@ std::pair<bool, nlohmann::json> blockchain::verify_transaction(nlohmann::json j)
 }
 
 void blockchain::init_blockchain() {
-	/*
+	generate_genesis_block();
 	if(broadcast::signup_peer() == 0) { // if server doesnt respond, skip
 		broadcast::get_peers(); // Connecting to other peers
 	}
@@ -176,15 +176,16 @@ void blockchain::init_blockchain() {
 	} else {
 		while(true) {
 			//broadcast::send_chain(true, false);
-			std::thread broadcaster(broadcast::send_chain, true, false, ""); // is original peer/miner, broadcasting blockchain
+			std::thread broadcaster(broadcast::send_chain, true, false, ""); // is original peer/miner, broadcasting blockchain			
 			std::thread transaction_recieve(broadcast::recieve_chain, true); // changing for debugging
 			broadcaster.join();
 			transaction_recieve.join();
 		}
 	}
-	*/
+	/*
 	nlohmann::json j = blockchain_json();
 	broadcast::broadcast_block(j["2"].dump());
+	*/
 }
 
 void blockchain::create_json(std::string name) {

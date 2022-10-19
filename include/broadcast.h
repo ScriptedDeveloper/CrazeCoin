@@ -12,6 +12,7 @@ namespace broadcast {
 	int send_transaction();
 	int signup_peer();
 	int unsign_pend_peer();
+	int fail_emergency_mode();
 	int add_transaction(nlohmann::json jtrans);
 	int broadcast_block(std::string block);
 	int save_block(nlohmann::json jblock, bool is_transaction, bool is_recieved_block);
@@ -42,6 +43,5 @@ namespace broadcast {
 	}
 	void clear_peers();
 	void error_handler(std::string message);
-	void fail_emergency_mode();
 }
 
