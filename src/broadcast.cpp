@@ -46,6 +46,14 @@ void broadcast::error_handler(std::string message) {
 	sleep(3);
 }
 
+void broadcast::recieve_chain_thread_handler() {
+	while(true) {
+		std::thread transaction_recieve(broadcast::recieve_chain, true); // changing for debugging
+		transaction_recieve.join();
+		sleep(20);
+	}
+}
+
 std::string broadcast::retrieve_peer(int n) {
 	std::ifstream ifs(blockchain::peer_path);
 	std::string peer;
@@ -273,9 +281,9 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 				return 0;
 			}
 		}
-		if(is_transaction) {
+		if(is_transaction && !jblock.contains("success")) {
 			try {
-				std::pair<bool, nlohmann::json> return_val = blockchain::verify_transaction(raw_to_json(str_buff)); // attempting to add transaction
+				std::pair<bool, nlohmann::json> return_val = blockchain::verify_transaction(jblock); // attempting to add transaction
 				if(!return_val.first) {
 					continue;  // transaction is invalid.
 				}
@@ -293,8 +301,12 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 				save_block(jblock, false, true);
 			}
 		} else {
-			if(save_block(jblock, true, false) != 0) {
-				return 1; // either invalid json or manipulated block
+			try {
+				if(save_block(jblock, true, false) != 0) {
+					return 1; // either invalid json or manipulated block
+				}
+			} catch(...) {
+				continue; // for some reason miner is recieving blockchain when he's sending it, blocking
 			}
 		}
 		unsign_pend_peer();

@@ -177,7 +177,7 @@ void blockchain::init_blockchain() {
 		while(true) {
 			//broadcast::send_chain(true, false);
 			std::thread broadcaster(broadcast::send_chain, true, false, ""); // is original peer/miner, broadcasting blockchain			
-			std::thread transaction_recieve(broadcast::recieve_chain, true); // changing for debugging
+			std::thread transaction_recieve(broadcast::recieve_chain_thread_handler);
 			broadcaster.join();
 			transaction_recieve.join();
 		}
