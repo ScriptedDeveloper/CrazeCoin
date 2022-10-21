@@ -423,6 +423,7 @@ std::pair<int, nlohmann::json> broadcast::get_peers() {
 	std::ifstream ifsPeer(blockchain::peer_path);
 	nlohmann::json jpeers, jpending, j;	
 	cpr::Response rpeer, rpending, ramount;
+	std::ifstream ifspeer(blockchain::peer_path);
 	//std::string txt_peer, txt_pending;
 	std::vector<std::string> text_vec(3); // 0 = peers ips, 1 = pending ips, 2 = amount of peers
 	std::vector<cpr::Response> response_vec(3); // same as above
@@ -444,13 +445,18 @@ std::pair<int, nlohmann::json> broadcast::get_peers() {
 		/// add here a thread to recieve_chain to accept transactions
 	} while(response_vec[0].status_code != 200 || response_vec[2].status_code != 200 || text_vec[0] == "{}" || text_vec[2] == "1"); // checking in case the list of peers/pending peers are empty
 	if(retrieves >= 3) {
-		std::cout << "[SYSTEM] Connecting to peer server failed! Opting to emergency mode..." << std::endl;
-		return {1, 0};
+		if(blockchain::is_empty(ifspeer)) {
+			std::cout << "[SYSTEM] Connecting to peer server failed! Opting to emergency mode..." << std::endl;
+			return {1, 0};
+		}
+		std::cout << "[SYSTEM] Connecting to peer server failed! Opting to offline backup..." << std::endl;
+		return {0, nlohmann::json::parse(ifspeer)};
 	}
 	jpeers = jpeers.parse(text_vec[0]);
 	jpending = jpending.parse(text_vec[1]);
 	j["peers"] = jpeers;
 	j["pending_peers"] = jpending;
+	j["peer_amount"] = text_vec[2];
 	std::ofstream ofsPeer(blockchain::peer_path);
 	ofsPeer << j.dump() << std::endl;
 	ifsPeer.close();
@@ -463,15 +469,30 @@ int broadcast::send_transaction() {
 	std::random_device rd;
 	std::uniform_int_distribution<int> rand;
 	std::mt19937 mt(rd());	
-	cpr::Response peer = cpr::Get(cpr::Url{blockchain::peer_tracker + "/peers"});
-	peer_amount = std::stoi(peer.text); // getting amount of peers for picking random peer PROBLEM : need to find way to send transaction when peer tracker not available
+	std::pair<int, nlohmann::json> peers = get_peers(); // getting peers to connect with
+	try {
+		peer_amount = nlohmann::json::parse(std::ifstream(blockchain::peer_path))["peer_amount"];
+	} catch(...) {
+		std::ifstream ifspeer(blockchain::peer_path);
+		if(!blockchain::is_empty(ifspeer)) {
+			nlohmann::json jpeer = jpeer.parse(ifspeer);
+			for(std::string ip : jpeer["peers"]) {
+				peer_amount++;
+			}
+			jpeer["peer_amount"] = peer_amount;
+			std::ofstream ofspeer(blockchain::peer_path);
+			ofspeer << jpeer; // saving peer amount so it doesnt have to count ips every time
+		} else {
+			std::cout << "[SYSTEM] Error! No peer file found!" << std::endl;
+			return 1;
+		}
+	}
 	if(peer_amount > 0) {
-		rand = std::uniform_int_distribution<int>(0, peer_amount--);
-		rand_number = rand(rd);
+	rand = std::uniform_int_distribution<int>(0, peer_amount--);
+	rand_number = rand(rd);
 	} else {
 		rand_number = 0; // peer_amount is already 0, no need to bother
 	}
-	std::pair<int, nlohmann::json> peers = get_peers(); // getting peers to connect with
 	if(peers.first == 0) {	
 		if(rand_number > peer_amount) {
 			send_transaction(); // trying again, preventing segfault
