@@ -13,6 +13,7 @@ namespace broadcast {
 	int signup_peer();
 	void recieve_chain_thread_handler();
 	int unsign_pend_peer();
+	void send_chain_thread_handler();
 	int fail_emergency_mode();
 	int add_transaction(nlohmann::json jtrans);
 	int broadcast_block(std::string block);

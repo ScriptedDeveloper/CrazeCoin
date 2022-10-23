@@ -123,6 +123,7 @@ nlohmann::json block::mine_transaction(int trans_num) {
 		index = std::to_string((int)jchain["blocks"]);
 		this->merkle_root = jchain["merkle_root"];
 		this->timestamp = jchain[index][str_num]["timestamp"];
+		broadcast::broadcast_block(jchain.dump()); // sending block to other nodes so the race starts!!
 		mine_block();
 		jchain["merkle_root"] = generate_hash(this->merkle_root + this->hash);
 		jchain[index][str_num]["hash"] = this->hash;

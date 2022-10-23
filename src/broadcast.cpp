@@ -14,6 +14,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
+#include <netinet/in.h>
 #define PORT 9000
 #include <iostream>
 #include <string>
@@ -27,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <thread>
 #include <future>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <errno.h>
 #include <cpr/cpr.h>
 #include <cpr/error.h>
@@ -50,6 +52,14 @@ void broadcast::recieve_chain_thread_handler() {
 	while(true) {
 		std::thread transaction_recieve(broadcast::recieve_chain, true); // changing for debugging
 		transaction_recieve.join();
+		sleep(20);
+	}
+}
+
+void broadcast::send_chain_thread_handler() {
+	while(true) {
+		std::thread broadcaster(broadcast::send_chain, true, false, ""); // is original peer/miner, broadcasting blockchain			
+		broadcaster.join();
 		sleep(20);
 	}
 }
@@ -159,6 +169,7 @@ int broadcast::add_transaction(nlohmann::json jtrans) { // adds transaction to b
 	ofchain = std::ofstream(blockchain::path);
 	ofchain << std::setw(4) << j << std::endl;
 	if(i == blockchain::max_transactions) {
+		broadcast_block(j[blocks_num].dump()); // sending block to other nodes so the race starts!!
 		for(int i = 0; i <= 3; i++) {
 			std::string s_i = std::to_string(i);
 			block b_trans(j[blocks_num][s_i]["previous_hash"], j[blocks_num][s_i]["recieve_addr"], j[blocks_num][s_i]["send_addr"], j[blocks_num][s_i]["amount"]);
@@ -167,7 +178,6 @@ int broadcast::add_transaction(nlohmann::json jtrans) { // adds transaction to b
 		jtrans["previous_hash"] = blockchain::get_previous_hash(true);
 		blocks_num = std::to_string(blockchain::block_number());
 		i = 0;
-		broadcast_block(j[blocks_num].dump());
 	}
 	return 0;
 }
@@ -241,6 +251,7 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 	int isocket, client_fd;
  	isocket = socket(AF_INET, SOCK_STREAM, 0);
 	int optional, inet;
+	char local_ip[INET_ADDRSTRLEN];
 	size_t buff_size;
 	char buff[1024]; // recieving blockchain
 	std::ofstream ofsBlock;
@@ -256,6 +267,9 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 		sockaddr.sin_port = htons(PORT);
 		sockaddr.sin_family = AF_INET;
 		sockaddr.sin_addr.s_addr = INADDR_ANY;
+		if(retrieve_peer(0) == "192.168.178.113") { // DEBUGGING PURPOSE: changing later to check for real public ip
+			return 1; // always picking first peer for debugging purposes
+		}
 		inet = inet_pton(AF_INET, retrieve_peer(0).c_str(), &sockaddr.sin_addr);
 		if(inet <= 0) {
 			error_handler("INET_PTON : return code " + std::to_string(inet));
@@ -281,7 +295,7 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 				return 0;
 			}
 		}
-		if(is_transaction && !jblock.contains("success")) {
+		if(is_transaction && !jblock.contains("success") && !jblock.contains("merkle_root")) {
 			try {
 				std::pair<bool, nlohmann::json> return_val = blockchain::verify_transaction(jblock); // attempting to add transaction
 				if(!return_val.first) {
@@ -297,8 +311,16 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 			std::ofstream ofschain(blockchain::path);
 			ofschain << str_buff;
 		} else if(jblock.contains("success")) {
-			if(jblock["success"]) {
-				save_block(jblock, false, true);
+			for(int i = 0; i <= 3; i++) {
+				add_transaction(jblock[std::to_string(i)]);
+			}
+		} else if(jblock.contains("blocks")) {
+			int block_num = blockchain::block_number();
+			if(block_num < jblock["blocks"]) {
+				for(int i = block_num; i <= jblock["blocks"]; i++) {
+					save_block(jblock[std::to_string(i)], false, true); // syncing outdated blockchain
+				}
+				return 0;
 			}
 		} else {
 			try {
