@@ -14,8 +14,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
-#include <netinet/in.h>
-#define PORT 9000
+#define PORT 8088
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -183,7 +182,6 @@ int broadcast::add_transaction(nlohmann::json jtrans) { // adds transaction to b
 }
 
 int broadcast::save_block(nlohmann::json jblock, bool is_transaction, bool is_recieved_block) {
-	std::ofstream ofchain;	
 	nlohmann::json jchain = blockchain::blockchain_json();
 	int blocks_num = blockchain::block_number();
 	if(!is_transaction && !is_recieved_block) {
@@ -201,16 +199,23 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction, bool is_re
 		} catch(nlohmann::json::parse_error) {
 			return 1; // block is invalid json
 		}
-	} else if(is_recieved_block) {
-		for(int i = 1; i < blockchain::max_transactions; i++) {
-			if(!blockchain::verify_transaction(jblock[std::to_string(i)]).first) {
-				return 1;
-			}
-		}
-		jchain["blocks"] = (int)jchain["blocks"] + 1;
-		jchain[std::to_string((int)jchain["blocks"])] = jblock;
+	} else if(is_recieved_block) {	
+		blocks_num++;
+		jchain[std::to_string(blocks_num)] = jblock;
+		jchain["blocks"] = (int)jchain["blocks"] + 1;	
 		std::ofstream ofschain(blockchain::path);
-		ofschain << std::setw(4) << jchain;
+		ofschain << jchain.dump(4);
+		for(int i = 0; i <= blockchain::max_transactions; i++) {
+			std::string jblockstr = jblock.dump(), i_str = std::to_string(i), i_default = std::to_string(i + 1);
+			if(std::stoi(i_default) <= 3) {	 // i_default can go up to 4, there are obviously no 4 transactions in a block
+				if(!blockchain::verify_transaction(jblock[i_default]).first) { // not checking first transaction because it doesnt contain signature for some reason (fixing l8ter)
+					return 1;
+				}
+			}
+			block b(jblock[i_str]["previous_hash"], jblock[i_str]["recieve_addr"], jblock[i_str]["send_addr"], jblock[i_str]["amount"]);
+			jchain = b.mine_transaction(i);
+		 	jblock = jchain[std::to_string(blocks_num)];
+		}
 		return 0;
 	} else {	
 		try {	
@@ -266,14 +271,13 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 		}
 		sockaddr.sin_port = htons(PORT);
 		sockaddr.sin_family = AF_INET;
-		sockaddr.sin_addr.s_addr = INADDR_ANY;
-		if(retrieve_peer(0) == "192.168.178.113") { // DEBUGGING PURPOSE: changing later to check for real public ip
-			return 1; // always picking first peer for debugging purposes
-		}
 		inet = inet_pton(AF_INET, retrieve_peer(0).c_str(), &sockaddr.sin_addr);
 		if(inet <= 0) {
 			error_handler("INET_PTON : return code " + std::to_string(inet));
 			continue;
+		}
+		if(retrieve_peer(0) == "192.168.178.113") { // DEBUGGING PURPOSE: changing later to check for real public ip
+			return 1; // always picking first peer for debugging purposes
 		}
 		client_fd = connect(isocket, (struct sockaddr*)&sockaddr, sizeof(sockaddr));
 		if(client_fd < 0) {
@@ -307,19 +311,26 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 			}
 		}
 		ifsblock.open(blockchain::path);
-		if(blockchain::is_blockchain_empty()) {
+		if(blockchain::is_blockchain_empty() && jblock.contains("merkle_root")) {
 			std::ofstream ofschain(blockchain::path);
 			ofschain << str_buff;
 		} else if(jblock.contains("success")) {
-			for(int i = 0; i <= 3; i++) {
-				add_transaction(jblock[std::to_string(i)]);
+			if(!blockchain::is_blockchain_empty()) {
+				if(save_block(jblock, false, true) == 0) {
+					std::cout << "[SYSTEM] Successfully added block!" << std::endl;
+					return 0;
+				}
+				std::cout << "[SYSTEM] Failed to add block!" << std::endl;
 			}
+			std::cout << "[SYSTEM] Rejected transaction! Missing blockchain." << std::endl;
+			return 1;
 		} else if(jblock.contains("blocks")) {
 			int block_num = blockchain::block_number();
 			if(block_num < jblock["blocks"]) {
 				for(int i = block_num; i <= jblock["blocks"]; i++) {
 					save_block(jblock[std::to_string(i)], false, true); // syncing outdated blockchain
 				}
+				std::cout << "[SYSTEM] Successfully synced blockchain!" << std::endl;
 				return 0;
 			}
 		} else {

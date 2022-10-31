@@ -123,7 +123,10 @@ nlohmann::json block::mine_transaction(int trans_num) {
 		index = std::to_string((int)jchain["blocks"]);
 		this->merkle_root = jchain["merkle_root"];
 		this->timestamp = jchain[index][str_num]["timestamp"];
-		broadcast::broadcast_block(jchain.dump()); // sending block to other nodes so the race starts!!
+		if(trans_num == 4) {
+			jchain[index]["success"] = true;
+			broadcast::broadcast_block(jchain.dump()); // sending block to other nodes so the race starts!!
+		}
 		mine_block();
 		jchain["merkle_root"] = generate_hash(this->merkle_root + this->hash);
 		jchain[index][str_num]["hash"] = this->hash;
@@ -131,8 +134,6 @@ nlohmann::json block::mine_transaction(int trans_num) {
 		trans_num++;
 		if(trans_num != 4) {
 			jchain[index][std::to_string(trans_num)]["previous_hash"] = this->hash; // previous hash needs to be set
-		} else {
-			jchain[index]["success"] = true;
 		}
 		ofschain.open(blockchain::path);
 		ofschain << std::setw(4) << jchain << std::endl;

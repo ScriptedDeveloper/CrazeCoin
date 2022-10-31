@@ -144,6 +144,7 @@ nlohmann::json blockchain::blockchain_json() {
 std::pair<bool, nlohmann::json> blockchain::verify_transaction(nlohmann::json j) {
 	CryptoPP::RSA::PublicKey publkey;
 	std::vector<std::string> raw_vector, hex_vector = {"signature", "send_addr"};
+	std::string trans = j.dump();
 	std::string timestamp = j["timestamp"];
 	std::string amount = std::to_string((int)j["amount"]);
 	std::string reciever = j["recieve_addr"];
@@ -165,7 +166,6 @@ std::pair<bool, nlohmann::json> blockchain::verify_transaction(nlohmann::json j)
 }
 
 void blockchain::init_blockchain() {
-	generate_genesis_block();
 	if(broadcast::signup_peer() == 0) { // if server doesnt respond, skip
 		broadcast::get_peers(); // Connecting to other peers
 	}
