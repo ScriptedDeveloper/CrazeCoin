@@ -215,8 +215,10 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction, bool is_re
 			block b(jblock[i_str]["previous_hash"], jblock[i_str]["recieve_addr"], jblock[i_str]["send_addr"], jblock[i_str]["amount"]);
 			jchain = b.mine_transaction(i);
 		 	jblock = jchain[std::to_string(blocks_num)];
-			jblokc["success"] = true;
 		}
+		jblock["success"] = true;
+		jchain[std::to_string(blocks_num)] = jblock;
+		ofschain << jchain.dump(4);
 		return 0;
 	} else {	
 		try {	
