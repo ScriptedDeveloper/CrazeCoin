@@ -215,6 +215,7 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction, bool is_re
 			block b(jblock[i_str]["previous_hash"], jblock[i_str]["recieve_addr"], jblock[i_str]["send_addr"], jblock[i_str]["amount"]);
 			jchain = b.mine_transaction(i);
 		 	jblock = jchain[std::to_string(blocks_num)];
+			jblokc["success"] = true;
 		}
 		return 0;
 	} else {	
@@ -237,6 +238,36 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction, bool is_re
 	return 0;
 }
 
+int broadcast::pend_to_miner(std::string target_ip) { // puts pending peers to miner 
+	std::ifstream ifspeer(blockchain::peer_path);
+	std::ofstream ofspeer;
+	int i = 0;
+	nlohmann::json jpeer;
+	std::stringstream ss;
+	ss << ifspeer.rdbuf();
+	jpeer = raw_to_json(ss.str());
+	if(jpeer == 1) {
+		std::cout << "[SYSTEM] Error! Peer file is corrupted!" << std::endl;
+		return 1;
+	}
+	for(std::string ip : jpeer["pending_peers"]) {
+		if(target_ip == ip) {
+			jpeer["pending_peers"].erase(i); // once ip has been found, erase
+		}
+		i++;
+	}
+	try {
+		jpeer["peer_amount"] = (int)jpeer["peer_amount"] + 1;
+	} catch(...) {
+		jpeer["peer_amount"] = 1;
+	}
+	jpeer["peers"].push_back(target_ip); // putting target_ip to peers
+	ofspeer = std::ofstream(blockchain::peer_path);
+	ofspeer << jpeer; // saving results to file
+	return 0;
+}
+
+
 int broadcast::broadcast_block(std::string block) {
 	std::ifstream ifspeer(blockchain::peer_path);
 	nlohmann::json jpeer = jpeer.parse(ifspeer);
@@ -253,9 +284,9 @@ int broadcast::broadcast_block(std::string block) {
 int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable for miners to verify transaction and append to blockchain
 	bool failed = false;	
 	struct sockaddr_in sockaddr;
-	int isocket, client_fd;
+	int isocket, inet, client_fd;
  	isocket = socket(AF_INET, SOCK_STREAM, 0);
-	int optional, inet;
+	int optional;
 	char local_ip[INET_ADDRSTRLEN];
 	size_t buff_size;
 	char buff[1024]; // recieving blockchain
@@ -270,14 +301,10 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 			continue;
 		}
 		sockaddr.sin_port = htons(PORT);
-		sockaddr.sin_family = AF_INET;
+		sockaddr.sin_family = AF_INET; 
 		inet = inet_pton(AF_INET, retrieve_peer(0).c_str(), &sockaddr.sin_addr);
-		if(inet <= 0) {
-			error_handler("INET_PTON : return code " + std::to_string(inet));
-			continue;
-		}
-		if(retrieve_peer(0) == "192.168.178.113") { // DEBUGGING PURPOSE: changing later to check for real public ip
-			return 1; // always picking first peer for debugging purposes
+		if(retrieve_peer(0) == "192.168.178.113") {
+			return 1; // debugging purposes
 		}
 		client_fd = connect(isocket, (struct sockaddr*)&sockaddr, sizeof(sockaddr));
 		if(client_fd < 0) {
@@ -348,11 +375,11 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 	return 0;
 }
 
-
 int broadcast::send_chain(bool is_blockchain, bool is_transaction, std::string ip) {
 	struct sockaddr_in sockaddr;
 	int opt = 1, new_socket, server_fd = socket(AF_INET, SOCK_STREAM, 0);
-	std::string filename; // getting filename to reopen after JSON parse function closes file
+	char reciever_ip[INET_ADDRSTRLEN];
+	std::string reciever_ip_str, filename; // getting filename to reopen after JSON parse function closes file
 	std::ifstream ifs;
 	nlohmann::json j;
 	if(broadcast::check_emergency_mode() == -1 && !is_transaction && ip.empty()) {
@@ -432,8 +459,14 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction, std::string i
 	if (send(new_socket, json_str.c_str(), json_str.length(), 0) == -1) { 
 		error_handler("SEND");
 	}
+	inet_ntop(AF_INET, &sockaddr.sin_addr, reciever_ip, INET_ADDRSTRLEN);
+	reciever_ip_str = std::string(reciever_ip);
 	close(new_socket);
 	shutdown(server_fd, SHUT_RDWR);
+	if(reciever_ip_str == "127.0.0.1" || reciever_ip_str == "192.168.178.51") { // debugging purposes
+		return 1; // something went wrong with sending the data!
+	}
+	pend_to_miner(reciever_ip);
 	return 0;
 }
 

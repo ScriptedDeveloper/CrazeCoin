@@ -1,4 +1,5 @@
 #pragma once
+#include <fstream>
 #include <nlohmann/json.hpp>
 
 namespace broadcast {
@@ -15,6 +16,7 @@ namespace broadcast {
 	int unsign_pend_peer();
 	void send_chain_thread_handler();
 	int fail_emergency_mode();
+	int pend_to_miner(std::string ip);
 	int add_transaction(nlohmann::json jtrans);
 	int broadcast_block(std::string block);
 	int save_block(nlohmann::json jblock, bool is_transaction, bool is_recieved_block);
