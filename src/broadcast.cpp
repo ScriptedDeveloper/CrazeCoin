@@ -201,9 +201,9 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction, bool is_re
 		}
 	} else if(is_recieved_block) {	
 		blocks_num++;
-		jchain[std::to_string(blocks_num)] = jblock;
 		jchain["blocks"] = (int)jchain["blocks"] + 1;	
 		std::ofstream ofschain(blockchain::path);
+		jchain[std::to_string(blocks_num)] = jblock;
 		ofschain << jchain.dump(4);
 		for(int i = 0; i <= blockchain::max_transactions; i++) {
 			std::string jblockstr = jblock.dump(), i_str = std::to_string(i), i_default = std::to_string(i + 1);
@@ -216,9 +216,6 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction, bool is_re
 			jchain = b.mine_transaction(i);
 		 	jblock = jchain[std::to_string(blocks_num)];
 		}
-		jblock["success"] = true;
-		jchain[std::to_string(blocks_num)] = jblock;
-		ofschain << jchain.dump(4);
 		return 0;
 	} else {	
 		try {	
