@@ -131,7 +131,7 @@ nlohmann::json block::mine_transaction(int trans_num) {
 		jchain[index][str_num]["hash"] = this->hash;
 		jchain[index][str_num]["nounce"] = this->nounce;
 		trans_num++;
-		if(trans_num != 4 || trans_num != 3) {
+		if(trans_num != 4) {
 			jchain[index][std::to_string(trans_num)]["previous_hash"] = this->hash; // previous hash needs to be set
 		}
 		ofschain.open(blockchain::path);
