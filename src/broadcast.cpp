@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <future>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <ifaddrs.h>
 #include <errno.h>
 #include <cpr/cpr.h>
 #include <cpr/error.h>
@@ -45,6 +46,38 @@ void broadcast::error_handler(std::string message) {
 	}
 	std::cout << strerror(errno) << std::endl;
 	sleep(3);
+}
+
+int broadcast::check_local_ip(std::string target_ip) { // checks if is own local ip
+	std::vector<std::string> ips = get_local_ips();
+	for(std::string ip : ips) {
+		if(ip == target_ip) {
+			return 0; // found!
+		}
+	}
+	return 1;
+}
+
+std::vector<std::string> broadcast::get_local_ips() {
+	struct ifaddrs *ifaddr;
+	std::vector<std::string> ips;
+	char ip[NI_MAXHOST];
+	if(getifaddrs(&ifaddr) == -1) {
+		perror("getifaddrs");
+		return {}; // failed to retrieve ifaddr struct
+	}
+	for(struct ifaddrs *ifacurr = ifaddr; ifacurr != NULL; ifacurr = ifacurr->ifa_next) {
+		if(ifacurr->ifa_addr == NULL) {
+			continue;
+		}
+		if(ifacurr->ifa_addr->sa_family == AF_INET) { // checking whether ipv4 or ipv6
+			 if(getnameinfo(ifacurr->ifa_addr, (ifacurr->ifa_addr->sa_family == AF_INET) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6), ip, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) != 0) {
+				 std::cout << "Failed to retrieve local IP!" << std::endl;
+			 }
+			ips.push_back(ip);
+		}
+	}
+	return ips;
 }
 
 void broadcast::recieve_chain_thread_handler() {
@@ -121,6 +154,17 @@ int broadcast::check_emergency_mode() {
 }
 
 int broadcast::unsign_pend_peer() { // unsigns pending peer and signs up as a miner
+	cpr::Response r_unsign = cpr::Get(cpr::Url{blockchain::peer_tracker + "/unsign_pend_peer"});
+	if(r_unsign.status_code == 200) {
+		cpr::Response r_signup = cpr::Get(cpr::Url{blockchain::peer_tracker + "/add_peer"});
+		if(r_unsign.status_code == 200) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+int broadcast::unsign_miner() { // unsigns miner and signs up as a pending peer
 	cpr::Response r_unsign = cpr::Get(cpr::Url{blockchain::peer_tracker + "/unsign_pend_peer"});
 	if(r_unsign.status_code == 200) {
 		cpr::Response r_signup = cpr::Get(cpr::Url{blockchain::peer_tracker + "/add_peer"});
@@ -271,7 +315,7 @@ int broadcast::broadcast_block(std::string block) {
 	std::ifstream ifspeer(blockchain::peer_path);
 	nlohmann::json jpeer = jpeer.parse(ifspeer);
 	for(std::string ip : jpeer["peers"]) {
-		if(ip != "192.168.178.113") {
+		if(check_local_ip(ip) == 1) {
 			std::ofstream ofsblock(blockchain::block_path);
 			ofsblock << block;
 			send_chain(false, false, ip);
@@ -302,7 +346,7 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 		sockaddr.sin_port = htons(PORT);
 		sockaddr.sin_family = AF_INET; 
 		inet = inet_pton(AF_INET, retrieve_peer(0).c_str(), &sockaddr.sin_addr);
-		if(retrieve_peer(0) == "192.168.178.113") {
+		if(check_local_ip(retrieve_peer(0)) == 0) {
 			return 1; // debugging purposes
 		}
 		client_fd = connect(isocket, (struct sockaddr*)&sockaddr, sizeof(sockaddr));
@@ -462,7 +506,7 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction, std::string i
 	reciever_ip_str = std::string(reciever_ip);
 	close(new_socket);
 	shutdown(server_fd, SHUT_RDWR);
-	if(reciever_ip_str == "127.0.0.1" || reciever_ip_str == "192.168.178.51") { // debugging purposes
+	if(check_local_ip(reciever_ip_str) == 0) {
 		return 1; // something went wrong with sending the data!
 	}
 	pend_to_miner(reciever_ip);

@@ -4,7 +4,6 @@ OBJ = $(patsubst src/%.cpp, build/%.o, $(SRC))
 all: blockchain.out wallet.out
 override CC		      := g++
 CFLAGS			      += -lssl
-CFLAGS			      += -lcrypto
 CFLAGS			      += -lcryptopp
 CFLAGS			      += -lstdc++fs
 CFLAGS			      += --std=c++17

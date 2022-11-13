@@ -41,5 +41,6 @@ class server(WebWrapper):
         self.wrapper.add_endpoint("/get_peers", "get_peers", self.api.get_peers, methods=["GET"])
         self.wrapper.add_endpoint("/pending_peers", "pending_peers", self.api.retrieve_pending_peers, methods=["GET"])
         self.wrapper.add_endpoint("/unsign_pend_peer", "unsign_pend_peer", self.api.remove_pending_peer, methods=["GET"])
+        self.wrapper.add_endpoint("/unsign_peer", "unsign_peer", self.api.remove_peer, methods=["GET"])
         self.wrapper.run()
 

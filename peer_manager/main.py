@@ -30,10 +30,14 @@ class API:
     def save_peerlist(self):
         open("peers.json", "w").write(dumps(self.peers_json)) # updating peer_json for other funcs
 
-    def check_peer(self, peer):
+    def check_peer(self, peer, remove = False): 
+        it = 0
         for peer in self.peers_json["peers"]:
             if peer == request.remote_addr:
+                if remove:
+                    self.peers_json["peers"].pop(it)
                 return False
+            it += 1
         return True # Returning true if not in JSON file
  
     def check_pend_peer(self, peer, remove = False):
@@ -71,6 +75,13 @@ class API:
         return jsonify({"status" : 200, "message" : "SUCCESS"})
 
     def remove_pending_peer(self):
+        if self.check_pend_peer(request.remote_addr, True) == True:
+            return jsonify({"status" : "203", "message" : "UNKNOWN"})
+        self.peers_json["peer_amount"] -= 1
+        self.save_peerlist()
+        return jsonify({"status" : 200, "message" : "SUCCESS"})
+
+    def remove_peer(self):
         if self.check_pend_peer(request.remote_addr, True) == True:
             return jsonify({"status" : "203", "message" : "UNKNOWN"})
         self.peers_json["peer_amount"] -= 1
