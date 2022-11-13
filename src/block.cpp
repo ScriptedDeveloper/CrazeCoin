@@ -13,6 +13,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <cryptopp/files.h>
 #include <iostream>
 #include <fstream>
 #include <cstdint>
@@ -21,7 +22,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <iomanip>
 #include <chrono>
 #include <nlohmann/json.hpp>
-#include <openssl/sha.h>
+#include <cryptopp/sha.h>
+#include <cryptopp/filters.h>
+#include <cryptopp/hex.h>
 #include "../include/blockchain.h"
 #include "../include/broadcast.h"
 #include "../include/block.h"
@@ -36,16 +39,15 @@ block::block(std::string previous_hash, std::string recieve_addr, std::string se
 }
 
 std::string block::generate_hash(std::string plain_text) {
-	uint8_t hash[SHA224_DIGEST_LENGTH];
-	SHA256_CTX sha;
-	SHA256_Init(&sha);
-	SHA256_Update(&sha, plain_text.c_str(), plain_text.size());
-	SHA256_Final(hash, &sha);
-	std::stringstream stream;
-	for(int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-		stream << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
-	}
-	return stream.str();
+	CryptoPP::SHA256 hash;
+	std::string str_hash;
+	CryptoPP::HexEncoder encoder(new CryptoPP::StringSink(str_hash));
+	std::string digest;
+	hash.Update((const CryptoPP::byte*)plain_text.data(), plain_text.size());
+	digest.resize(hash.DigestSize());
+	hash.Final((CryptoPP::byte*)&digest[0]);
+	CryptoPP::StringSource(digest, true, new CryptoPP::Redirector(encoder));
+	return str_hash;
 }
 
 std::string block::mine_block() {
