@@ -90,7 +90,7 @@ void broadcast::recieve_chain_thread_handler() {
 
 void broadcast::send_chain_thread_handler() {
 	while(true) {
-		std::thread broadcaster(broadcast::send_chain, true, false, ""); // is original peer/miner, broadcasting blockchain			
+		std::thread broadcaster(broadcast::send_chain, true, false, "", ""); // is original peer/miner, broadcasting blockchain			
 		broadcaster.join();
 		sleep(20);
 	}
@@ -266,6 +266,12 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction, bool is_re
 			if(!jchain[std::to_string(blocks_num)].contains("success") || jchain[std::to_string(blocks_num)]["success"] == false) {
 				if(blockchain::check_balances(jblock["send_addr"]) >= jblock["amount"]) { // checking whether wallet has enough coins
 					add_transaction(jblock);
+					bool contains = false;
+					if(!jblock.contains("peer_amount")) {
+						jblock["peer_amount"] = 0; // setting peer amount for list
+						contains = true;
+					}
+					send_chain(false, false, (!contains) ? retrieve_peer((int)jblock["peer_amount"] + 1) : retrieve_peer(jblock["peer_amount"]), jblock.dump());			
 				}
 			} 
 			else {
@@ -418,7 +424,7 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 	return 0;
 }
 
-int broadcast::send_chain(bool is_blockchain, bool is_transaction, std::string ip) {
+int broadcast::send_chain(bool is_blockchain, bool is_transaction, std::string ip, std::string data) {
 	struct sockaddr_in sockaddr;
 	int opt = 1, new_socket, server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	char reciever_ip[INET_ADDRSTRLEN];
@@ -434,6 +440,8 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction, std::string i
 	} else if(!is_blockchain && !is_transaction) {
 		filename = "block.json";
 		ifs.open(filename);
+	} else if(!data.empty()) { // if broadcasting transaction over entire network
+		j = data;
 	} else { // is_transaction bool is true, so opening ifs with transaction JSON
 		filename = "transaction.json";
 		ifs.open(filename);

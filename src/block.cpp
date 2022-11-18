@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include <iomanip>
 #include <chrono>
+#include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
 #include <cryptopp/sha.h>
 #include <cryptopp/filters.h>
@@ -47,7 +48,7 @@ std::string block::generate_hash(std::string plain_text) {
 	digest.resize(hash.DigestSize());
 	hash.Final((CryptoPP::byte*)&digest[0]);
 	CryptoPP::StringSource(digest, true, new CryptoPP::Redirector(encoder));
-	return str_hash;
+	return boost::algorithm::to_lower_copy(str_hash);
 }
 
 std::string block::mine_block() {

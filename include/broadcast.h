@@ -5,17 +5,20 @@
 namespace broadcast {
 	std::string retrieve_peer(int n);
 	std::string retrieve_pending(int n);
+	std::vector<std::string> get_local_ips();
 	int check_block(nlohmann::json jblock);
 	int connect_network();
 	std::pair<int, nlohmann::json> get_peers();
-	int send_chain(bool is_blockchain, bool is_transaction, std::string ip = "");
+	int send_chain(bool is_blockchain, bool is_transaction, std::string ip = "", std::string data = "");
 	int recieve_chain(bool is_transaction);
 	int send_transaction();
 	int signup_peer();
+	int check_local_ip(std::string target_ip);
 	void recieve_chain_thread_handler();
 	int unsign_pend_peer();
 	void send_chain_thread_handler();
 	int fail_emergency_mode();
+	int unsign_miner();
 	int pend_to_miner(std::string ip);
 	int add_transaction(nlohmann::json jtrans);
 	int broadcast_block(std::string block);

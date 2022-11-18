@@ -170,13 +170,20 @@ void blockchain::init_blockchain() {
 		broadcast::get_peers(); // Connecting to other peers
 	}
 	if(is_blockchain_empty() || check_chain() == 1) { // checks also if blockchain is valid
+		std::ifstream ifspeer(blockchain::peer_path);
+		nlohmann::json jpeer = jpeer.parse(ifspeer);
+		for(std::string ip : jpeer["peers"]) {
+			if(broadcast::check_local_ip(ip) == 0) {
+				broadcast::unsign_miner(); // currently registered as a miner, so unsigning
+			}
+		}
 		std::ofstream ofs(blockchain::path); // clearing blockchain content in case check_chain == 1
 		broadcast::recieve_chain(false);
 		init_blockchain();
 	} else {
 		while(true) {
 			//broadcast::send_chain(true, false);
-			std::thread broadcaster(broadcast::send_chain, true, false, ""); // is original peer/miner, broadcasting blockchain			
+			std::thread broadcaster(broadcast::send_chain, true, false, "", ""); // is original peer/miner, broadcasting blockchain			
 			std::thread transaction_recieve(broadcast::recieve_chain_thread_handler);
 			broadcaster.join();
 			transaction_recieve.join();
