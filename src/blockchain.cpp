@@ -37,7 +37,8 @@ namespace blockchain {
 	const std::string peer_path = std::experimental::filesystem::current_path().u8string() + "/peers.json";
 	const std::string addr_path = std::experimental::filesystem::current_path().u8string() + "/address.bin";
 	const std::string block_path = std::experimental::filesystem::current_path().u8string() + "/block.json";
-	const std::string peer_tracker = "192.168.178.51:6882"; // changing later to correct domain
+	const std::string config_path = std::experimental::filesystem::current_path().u8string() + "/config.json";
+	std::string peer_tracker;
 	const int max_transactions = 3; // max transactions in a block
 }
 
@@ -61,6 +62,21 @@ block blockchain::generate_genesis_block() {
 	b.timestamp = block::get_timestamp();
 	b.add_block();
 	return b;
+}
+
+void blockchain::first_time() {
+	std::ifstream ifsconfig(config_path);
+	nlohmann::json jconf;
+	if(is_empty(ifsconfig)) {
+		std::string peer_ip;
+		std::cout << "Hello! It seems like your first time. Please put in here your IP/domain of the peer tracker : " << std::endl;
+		std::cin >> peer_ip;
+		jconf["peer_tracker"] = peer_ip;
+		std::ofstream ofsconf(config_path);
+		ofsconf << jconf;
+	}
+	jconf = jconf.parse(std::ifstream(config_path));
+	peer_tracker = nlohmann::json::parse(std::ifstream(config_path))["peer_tracker"]; // changing later to correct domain
 }
 
 std::string blockchain::retrieve_addr() {
@@ -166,6 +182,7 @@ std::pair<bool, nlohmann::json> blockchain::verify_transaction(nlohmann::json j)
 }
 
 void blockchain::init_blockchain() {
+	first_time(); // checks if peer tracker is set
 	if(broadcast::signup_peer() == 0) { // if server doesnt respond, skip
 		broadcast::get_peers(); // Connecting to other peers
 	}
