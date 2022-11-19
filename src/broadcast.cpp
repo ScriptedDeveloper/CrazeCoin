@@ -38,7 +38,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "../include/broadcast.h"
 #include "../include/blockchain.h"
 
-void broadcast::error_handler(std::string message) {
+std::string broadcast::error_handler(std::string message) {
 	std::cout << "Failed at : " << message << std::endl;
 	std::string error = strerror(errno);
 	if(error == "Transport endpoint is already connected") {
@@ -46,6 +46,7 @@ void broadcast::error_handler(std::string message) {
 	}
 	std::cout << strerror(errno) << std::endl;
 	sleep(3);
+	return error;
 }
 
 int broadcast::check_local_ip(std::string target_ip) { // checks if is own local ip
@@ -333,8 +334,8 @@ int broadcast::broadcast_block(std::string block) {
 int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable for miners to verify transaction and append to blockchain
 	bool failed = false;	
 	struct sockaddr_in sockaddr;
-	int isocket, inet, client_fd;
- 	isocket = socket(AF_INET, SOCK_STREAM, 0);
+	int server_fd, opt = 1, new_socket;
+ 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	int optional;
 	char local_ip[INET_ADDRSTRLEN];
 	size_t buff_size;
@@ -345,26 +346,35 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 		if(broadcast::check_emergency_mode() == 1) {
 			broadcast::fail_emergency_mode(); // no peers available, failed
 		}
-		if(isocket < 0) {
+		if(server_fd == 0) {
 			error_handler("SOCKET CREATION");
+			continue;
+		}	
+		if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) != 0) {
+			error_handler("SETSOCKOPT");
 			continue;
 		}
 		sockaddr.sin_port = htons(PORT);
-		sockaddr.sin_family = AF_INET; 
-		inet = inet_pton(AF_INET, retrieve_peer(0).c_str(), &sockaddr.sin_addr);
-		if(check_local_ip(retrieve_peer(0)) == 0) {
-			return 1; // debugging purposes
-		}
-		client_fd = connect(isocket, (struct sockaddr*)&sockaddr, sizeof(sockaddr));
-		if(client_fd < 0) {
-			error_handler("WAITING FOR CONNECTION");
+		sockaddr.sin_family = AF_INET;
+		sockaddr.sin_addr.s_addr = INADDR_ANY;
+		if(bind(server_fd, (struct sockaddr*)&sockaddr, sizeof(sockaddr)) < 0) {
+			error_handler("BIND");
 			continue;
 		}
+		if(listen(server_fd, 5) < 0) {
+			error_handler("LISTEN");
+			continue;
+		}
+		socklen_t size = sizeof(sockaddr);
+		if((new_socket = accept(server_fd, (struct sockaddr*)&sockaddr, &size)) < 0) {
+			error_handler("ACCEPT");
+			continue;
+		} 	
 		std::cout << "Waiting for blockchain..." << std::endl;
-		read(isocket, buff, 1024);
+		read(new_socket, buff, 1024);
 		buff_size = std::atol(buff); // getting buffer size for real blockchain
 		char buffchain[buff_size];
-		recv(isocket, buffchain, buff_size, MSG_WAITALL);
+		recv(new_socket, buffchain, buff_size, MSG_WAITALL);
 		std::string str_buff(buffchain);
 		nlohmann::json jblock = raw_to_json(str_buff);
 		if(jblock.contains(("success")) && !blockchain::is_blockchain_empty()) {
@@ -419,6 +429,7 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 			}
 		}
 		unsign_pend_peer();
+		close(server_fd);
 		break;
 	} while(true);
 	return 0;
@@ -426,7 +437,7 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 
 int broadcast::send_chain(bool is_blockchain, bool is_transaction, std::string ip, std::string data) {
 	struct sockaddr_in sockaddr;
-	int opt = 1, new_socket, server_fd = socket(AF_INET, SOCK_STREAM, 0);
+	int opt = 1, inet, client_fd, isocket = socket(AF_INET, SOCK_STREAM, 0);
 	char reciever_ip[INET_ADDRSTRLEN];
 	std::string reciever_ip_str, filename; // getting filename to reopen after JSON parse function closes file
 	std::ifstream ifs;
@@ -462,58 +473,36 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction, std::string i
 	std::stringstream ss_chain;
 	ss_chain << ifs_obj.rdbuf(); // putting transaction into raw stringstream format since nlohmann::json::dump is behaving incorrectly
 	std::string json_str = ss_chain.str();
-	std::string next_peer;
-	if(ip.empty()) {
-		if(!is_transaction && is_blockchain){
-			next_peer = retrieve_pending(0); // declaring var only if its a miner broadcasting blockchain
-			if(next_peer.empty()) {
-				return 1; // no pending peer found
-			}
-		} else {
-			next_peer = retrieve_peer(0);
-		}
-	} else {
-		next_peer = ip;
-	}
-	/*if(check_node(retrieve_peer(0)) == 1) { Thanks to ISP only 1 IP for all devices!
-		next_peer = retrieve_peer(1);
-	}
-	*/
-	if(server_fd == 0) {
-		error_handler("SERVER_FD");
-		send_chain(is_blockchain, is_transaction);
-	}
-	if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) != 0) {
-		error_handler("SETSOCKOPT");
-		send_chain(is_blockchain, is_transaction);
+	if(isocket < 0) {
+		error_handler("SOCKET CREATION");
+		send_chain(is_blockchain, is_transaction, ip, data);
 	}
 	sockaddr.sin_port = htons(PORT);
-	sockaddr.sin_family = AF_INET;
-	sockaddr.sin_addr.s_addr = INADDR_ANY;
-	if(bind(server_fd, (struct sockaddr*)&sockaddr, sizeof(sockaddr)) < 0) {
-		error_handler("BIND");
-		send_chain(is_blockchain, is_transaction);
+	sockaddr.sin_family = AF_INET; 
+	inet = inet_pton(AF_INET, (ip.empty()) ? retrieve_peer(0).c_str() : ip.c_str(), &sockaddr.sin_addr);
+	if(check_local_ip(retrieve_peer(0)) == 0 && ip.empty()) {
+		return 1; // debugging purposes
 	}
-	if(listen(server_fd, 5) < 0) {
-		error_handler("LISTEN");
-		send_chain(is_blockchain, is_transaction);
+	client_fd = connect(isocket, (struct sockaddr*)&sockaddr, sizeof(sockaddr));
+	if(client_fd < 0) {
+		error_handler("WAITING FOR CONNECTION");
+		send_chain(is_blockchain, is_transaction, ip, data);
 	}
-	std::cout << "\nConnecting to peer : " << next_peer << std::endl;
-	socklen_t size = sizeof(sockaddr);
-	if((new_socket = accept(server_fd, (struct sockaddr*)&sockaddr, &size)) < 0) {
-		error_handler("ACCEPT");
-	} 
 	std::string length_str = std::to_string(json_str.length());
-	if(send(new_socket, length_str.c_str(), 1024, 0) == -1) { // sending size of buffer
-		error_handler("SEND");
+	if(send(isocket, length_str.c_str(), 1024, MSG_NOSIGNAL) == -1) { // sending size of buffer
+		if(error_handler("SEND") != "Broken pipe") { // ignoring broken pipe
+			send_chain(is_blockchain, is_transaction, ip, data);
+		}
 	}
-	if (send(new_socket, json_str.c_str(), json_str.length(), 0) == -1) { 
-		error_handler("SEND");
+	if(send(isocket, json_str.c_str(), json_str.length(), MSG_NOSIGNAL) == -1) { 	
+		if(error_handler("SEND") != "Broken pipe") { // ignoring broken pipe
+			send_chain(is_blockchain, is_transaction, ip, data);
+		}
 	}
 	inet_ntop(AF_INET, &sockaddr.sin_addr, reciever_ip, INET_ADDRSTRLEN);
 	reciever_ip_str = std::string(reciever_ip);
-	close(new_socket);
-	shutdown(server_fd, SHUT_RDWR);
+	close(isocket);
+	shutdown(client_fd, SHUT_RDWR);
 	if(check_local_ip(reciever_ip_str) == 0) {
 		return 1; // something went wrong with sending the data!
 	}

@@ -49,6 +49,6 @@ namespace broadcast {
 		return j_data;
 	}
 	void clear_peers();
-	void error_handler(std::string message);
+	std::string error_handler(std::string message);
 }
 
