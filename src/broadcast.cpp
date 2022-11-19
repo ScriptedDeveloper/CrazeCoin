@@ -370,6 +370,10 @@ int broadcast::recieve_chain(bool is_transaction) { // is_transaction variable f
 			error_handler("ACCEPT");
 			continue;
 		} 	
+		inet_ntop(AF_INET, &sockaddr.sin_addr, local_ip, INET_ADDRSTRLEN);
+		if(check_local_ip(std::string(local_ip)) == 0 || std::string(local_ip) == "127.0.0.1") { // not accepting transactions from the same IP
+			continue;
+		}
 		std::cout << "Waiting for blockchain..." << std::endl;
 		read(new_socket, buff, 1024);
 		buff_size = std::atol(buff); // getting buffer size for real blockchain
