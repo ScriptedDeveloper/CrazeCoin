@@ -5,7 +5,7 @@
 #include <cryptopp/config_int.h>
 #include <cryptopp/queue.h>
 #include <cryptopp/secblockfwd.h>
-#include <cryptopp/cryptlib.h>
+#include <cryptopp/cryptlib.h> 
 #include <cryptopp/files.h>
 #include <cryptopp/rsa.h>
 #include <cryptopp/osrng.h>
@@ -22,16 +22,7 @@ CryptoPP::RSA::PrivateKey rsa_wrapper::generate_private_key() {
 	return privkey;
 }
 
-void rsa_wrapper::write(std::string filename, CryptoPP::BufferedTransformation &bt) { // saves in hex format
-	CryptoPP::HexEncoder encoder;
-	CryptoPP::FileSink file(filename.c_str());
-	bt.CopyTo(encoder);
-	bt.MessageEnd();
-	encoder.CopyTo(file);
-	encoder.MessageEnd();
-}
-
-void rsa_wrapper::load(std::string filename, CryptoPP::BufferedTransformation &bt) { // saves in BER format
+void rsa_wrapper::load(std::string filename, CryptoPP::ByteQueue &bt) { // saves in BER format
 	CryptoPP::HexDecoder decoder;
 	std::ifstream ifs(filename);
 	std::stringstream key;
@@ -55,19 +46,25 @@ std::string rsa_wrapper::raw_hex_decode(std::string hex_str) { // decodes hex si
 	return decoded_str;
 }
 
-void rsa_wrapper::save_private_key(std::string filename, CryptoPP::RSA::PrivateKey &privkey) {
-	CryptoPP::ByteQueue queue;
-	privkey.Save(queue);
+void rsa_wrapper::save_signature(std::string filename, CryptoPP::ByteQueue bt) {
 	CryptoPP::HexEncoder encoder;
-	queue.CopyTo(encoder);
-	queue.MessageEnd();
-	write(filename, queue); 
+	CryptoPP::FileSink file(filename.c_str());
+	bt.CopyTo(encoder);
+	bt.MessageEnd();
+	encoder.CopyTo(file);
+	encoder.MessageEnd();
 }
 
-void rsa_wrapper::save_public_key(std::string filename, CryptoPP::RSA::PublicKey &publkey) {
-	CryptoPP::ByteQueue queue;
-	publkey.Save(queue);
-	write(filename, queue); 
+void rsa_wrapper::save_private_key(std::string filename, const CryptoPP::RSA::PrivateKey &privkey) {	
+	CryptoPP::HexEncoder encoder(new CryptoPP::FileSink(filename.c_str()));
+	privkey.Save(encoder);
+	encoder.MessageEnd();
+}
+
+void rsa_wrapper::save_public_key(std::string filename, const CryptoPP::RSA::PublicKey &publkey) {
+	CryptoPP::HexEncoder encoder(new CryptoPP::FileSink(filename.c_str()));
+	publkey.Save(encoder);
+	encoder.MessageEnd();
 }
 
 void rsa_wrapper::load_private_key(std::string filename, CryptoPP::RSA::PrivateKey &privkey) {
@@ -108,6 +105,6 @@ CryptoPP::SecByteBlock rsa_wrapper::sign_data(std::string data, CryptoPP::RSA::P
 	signed_data.Put((CryptoPP::byte *const)data.data(), data.size());
 	sign_queue.Put(signature, signature.size());
 	size_t size = signer.MaxSignatureLength();
-	write("signature.dat", sign_queue);
+	save_signature("signature.dat", sign_queue);
 	return signature;
 }

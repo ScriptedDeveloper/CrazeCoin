@@ -84,7 +84,7 @@ int wallet::send(char **argv) {
 	nlohmann::json jtransaction;
 	CryptoPP::RSA::PrivateKey privkey;
 	std::string timestamp = block::get_timestamp();
-	std::string sign_data = std::string(argv[3]) + "/" + std::string(argv[4]) + "/" + timestamp;
+	std::string sign_data = std::string(argv[3]) + "/" + std::string(argv[4]) + "/" + print_addr() + "/" + timestamp;
 	jtransaction["recieve_addr"] = argv[3];
 	jtransaction["amount"] = std::atoi(argv[4]);
 	jtransaction["send_addr"] = print_addr();
@@ -99,7 +99,7 @@ int wallet::send(char **argv) {
 	jtransaction["signature_len"] = signature.size();
 	jtransaction["signature"] = ss_signature.str(); // reading signature from file, parsing it into stringbuffer and turning it into string
 	create_transaction_json(jtransaction);
-	 broadcast::send_transaction();
+	broadcast::send_transaction();
 	// having to sign, and broadcast transaction to network
 	return 0;
 }

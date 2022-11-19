@@ -7,15 +7,18 @@
 namespace blockchain {
 	extern const std::string path;
 	extern const std::string peer_path;
+	extern const std::string block_path;
 	extern const std::string peer_tracker;
+	extern const int max_transactions;
 	block generate_genesis_block();	
 	std::string retrieve_addr();
 	bool is_blockchain_empty();
-	bool verify_transaction(nlohmann::json j);
+	std::pair<bool, nlohmann::json> verify_transaction(nlohmann::json j);
 	int block_number();
 	int check_chain();
+	int get_transaction_num(std::string block_num);
 	std::string get_previous_hash(bool last_block);
-	int add_transaction(nlohmann::json jtransaction);
+	std::string blockchain_raw();
 	int check_balances(std::string addr);
 	int add_block(nlohmann::json jblock);
 	void init_blockchain();
