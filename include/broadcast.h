@@ -21,7 +21,7 @@ namespace broadcast {
 	int unsign_miner();
 	int pend_to_miner(std::string ip);
 	int add_transaction(nlohmann::json jtrans);
-	int broadcast_block(std::string block);
+	int broadcast_transaction(nlohmann::json block);
 	int save_block(nlohmann::json jblock, bool is_transaction, bool is_recieved_block);
 	int check_emergency_mode();
 	int peers_empty();

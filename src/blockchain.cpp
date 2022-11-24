@@ -181,7 +181,16 @@ std::pair<bool, nlohmann::json> blockchain::verify_transaction(nlohmann::json j)
 	return {verify_trans, j};
 }
 
-void blockchain::init_blockchain() {
+void blockchain::init_blockchain(int argc, char **argv) {
+	if(argc != 1 && argv[1] != "\0") {
+		if(argv[1] == "init") {
+			generate_genesis_block();
+		}
+		else {
+			std::cout << std::endl << "<" << argv[0] << "> <flags>\ninit : create new blockchain (genesis block)" << std::endl;
+			exit(0);
+		}
+	}
 	first_time(); // checks if peer tracker is set
 	if(broadcast::signup_peer() == 0) { // if server doesnt respond, skip
 		broadcast::get_peers(); // Connecting to other peers
@@ -196,7 +205,7 @@ void blockchain::init_blockchain() {
 		}
 		std::ofstream ofs(blockchain::path); // clearing blockchain content in case check_chain == 1
 		broadcast::recieve_chain(false);
-		init_blockchain();
+		init_blockchain(argc, argv);
 	} else {
 		while(true) {
 			//broadcast::send_chain(true, false);
