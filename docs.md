@@ -6,6 +6,7 @@
 - [blockchain.cpp](#blockchain.cpp)
 - [wallet.cpp](#wallet.cpp)
 - [rsa.cpp](#rsa.cpp)
+- [block.cpp](#block.cpp)
 
 ## Project Structure
 The projects consists of 3 folders.\
