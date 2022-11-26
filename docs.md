@@ -24,3 +24,5 @@ This source file contains all functions responsible for the Blockchain Network. 
 ## rsa.cpp
 This source file is simply a wrapper for the [Crypto++](https://www.cryptopp.com/) library. All cryptocraphic operations are made by that library.
 
+## block.cpp
+[block.cpp](src/block.cpp) is an OOP implementation of a block in the blockchain. In this source file the blocks are getting mined and contains extensions of [broadcast.cpp](src/broadcast.cpp).
