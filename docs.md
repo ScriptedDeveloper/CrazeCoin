@@ -2,11 +2,11 @@
 [Return to Main Page](../../)
 ## Table of Contents
 - [Project Structure](#Project-Structure)
-- [broadcast.cpp](#broadcast-.h)
-- [blockchain.cpp](#blockchain.cpp)
-- [wallet.cpp](#wallet.cpp)
-- [rsa.cpp](#rsa.cpp)
-- [block.cpp](#block.cpp)
+- [broadcast.cpp](#broadcasth)
+- [blockchain.cpp](#blockchaincpp)
+- [wallet.cpp](#walletcpp)
+- [rsa.cpp](#rsacpp)
+- [block.cpp](#blockcpp)
 
 ## Project Structure
 The projects consists of 3 folders.\
