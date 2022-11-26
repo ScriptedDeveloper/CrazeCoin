@@ -106,7 +106,8 @@ std::string broadcast::retrieve_peer(int n) {
 		peer = j["peers"][n]; // returning n element at the moment (array)
 	} catch(...) { // in case peer.json has been manipulated or only pending peers
 		blockchain::create_json(blockchain::peer_path);
-		blockchain::init_blockchain(0 , (char**)"");	
+		error_handler("PEER FILE_EMPTY");
+		exit(1);
 	}
 	return peer;
 }
@@ -235,7 +236,7 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction, bool is_re
 			if(check_block(jblock) != 0) {
 				return 1; // block is invalid
 			}	
-		} catch(nlohmann::json_abi_v3_11_2::detail::type_error) {
+		} catch(...) {
 			// ignoring type error, creating a new block since last one is full
 		} 
 		try {

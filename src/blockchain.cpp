@@ -182,8 +182,8 @@ std::pair<bool, nlohmann::json> blockchain::verify_transaction(nlohmann::json j)
 }
 
 void blockchain::init_blockchain(int argc, char **argv) {
-	if(argc != 1 && argv[1] != "\0") {
-		if(argv[1] == "init") {
+	if(argc >=2) {
+		if(std::strncmp(argv[1], "init", 5) == 0) {
 			generate_genesis_block();
 		}
 		else {
