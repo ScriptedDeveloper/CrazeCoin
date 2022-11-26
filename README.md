@@ -23,7 +23,7 @@ Start peer-tracker:
 
 Start CrazeCoin-Instance:
 ```bash
-  make run
+  make && ./blockchain.out
 ```
 You need to input the IP/Domain of the Peer-Tracker to get started.
 
