@@ -53,5 +53,8 @@ No, I wouldn't recommend doing that. I did not test CrazeCoin against potential 
 # Contributions
 Any form of contribution is welcome since I'm only a solo developer working on this project.
 
+# Documentation
+[You can visit the Documentation here.](docs.md)
+
 ## Questions?
 Feel free to open a issue or contact me personally through contact@crazeserver.de
