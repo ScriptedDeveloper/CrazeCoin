@@ -2,7 +2,7 @@
 [Return to Main Page](../../)
 ## Table of Contents
 - [Project Structure](#Project-Structure)
-- [broadcast.cpp](#broadcast.h)
+- [broadcast.cpp](#broadcast-.h)
 - [blockchain.cpp](#blockchain.cpp)
 - [wallet.cpp](#wallet.cpp)
 - [rsa.cpp](#rsa.cpp)
