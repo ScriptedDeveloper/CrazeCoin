@@ -23,7 +23,7 @@ namespace blockchain {
 	std::string blockchain_raw();
 	int check_balances(std::string addr);
 	int add_block(nlohmann::json jblock);
-	void init_blockchain();
+	void init_blockchain(int argc, char** argv);
 	void create_json(std::string name);
 	bool is_empty(std::ifstream &ifS);
 	void check_files();

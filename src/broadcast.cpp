@@ -106,7 +106,8 @@ std::string broadcast::retrieve_peer(int n) {
 		peer = j["peers"][n]; // returning n element at the moment (array)
 	} catch(...) { // in case peer.json has been manipulated or only pending peers
 		blockchain::create_json(blockchain::peer_path);
-		blockchain::init_blockchain();	
+		error_handler("PEER FILE_EMPTY");
+		exit(1);
 	}
 	return peer;
 }
@@ -117,7 +118,7 @@ std::string broadcast::retrieve_pending(int n) { // same as retrieve_peer with s
 	try {
 		j = j.parse(ifs);
 	} catch(nlohmann::detail::parse_error) {
-		blockchain::init_blockchain();
+		blockchain::init_blockchain(0 , (char**)"");
 	}
 	if(!j["pending_peers"].empty()) {
 		return j["pending_peers"][n]; // instead of peers, returning pending_peers
@@ -212,8 +213,8 @@ int broadcast::add_transaction(nlohmann::json jtrans) { // adds transaction to b
 	j[blocks_num][std::to_string(i)] = jtrans;
 	ofchain = std::ofstream(blockchain::path);
 	ofchain << std::setw(4) << j << std::endl;
+	broadcast_transaction(jtrans); // sending transaction to other nodes so the race starts soon!!
 	if(i == blockchain::max_transactions) {
-		broadcast_block(j[blocks_num].dump()); // sending block to other nodes so the race starts!!
 		for(int i = 0; i <= 3; i++) {
 			std::string s_i = std::to_string(i);
 			block b_trans(j[blocks_num][s_i]["previous_hash"], j[blocks_num][s_i]["recieve_addr"], j[blocks_num][s_i]["send_addr"], j[blocks_num][s_i]["amount"]);
@@ -235,11 +236,12 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction, bool is_re
 			if(check_block(jblock) != 0) {
 				return 1; // block is invalid
 			}	
-		} catch(nlohmann::json_abi_v3_11_2::detail::type_error) {
+		} catch(...) {
 			// ignoring type error, creating a new block since last one is full
 		} 
 		try {
 			blocks_num++;
+			broadcast_transaction(jblock);
 			b.add_block();
 		} catch(nlohmann::json::parse_error) {
 			return 1; // block is invalid json
@@ -272,7 +274,6 @@ int broadcast::save_block(nlohmann::json jblock, bool is_transaction, bool is_re
 						jblock["peer_amount"] = 0; // setting peer amount for list
 						contains = true;
 					}
-					send_chain(false, false, (!contains) ? retrieve_peer((int)jblock["peer_amount"] + 1) : retrieve_peer(jblock["peer_amount"]), jblock.dump());			
 				}
 			} 
 			else {
@@ -318,16 +319,17 @@ int broadcast::pend_to_miner(std::string target_ip) { // puts pending peers to m
 }
 
 
-int broadcast::broadcast_block(std::string block) {
+int broadcast::broadcast_transaction(nlohmann::json block) {
 	std::ifstream ifspeer(blockchain::peer_path);
 	nlohmann::json jpeer = jpeer.parse(ifspeer);
-	for(std::string ip : jpeer["peers"]) {
-		if(check_local_ip(ip) == 1) {
-			std::ofstream ofsblock(blockchain::block_path);
-			ofsblock << block;
-			send_chain(false, false, ip);
-		}
+	int peer_index;
+	(block.contains("index")) ? peer_index = block["index"] : peer_index = 0; // sets peer index to either json object to 0
+	if(check_local_ip(jpeer["peers"][peer_index]) == 0) {
+		peer_index++; // if is same ip of machine, skipping
 	}
+	std::ofstream ofsblock(blockchain::block_path);
+	ofsblock << block;
+	send_chain(false, false, jpeer["peers"][peer_index], block.dump());
 	return 0;
 }
 
@@ -452,7 +454,7 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction, std::string i
 	if(is_blockchain) {
 		filename = blockchain::path;
 		ifs.open(filename);
-	} else if(!is_blockchain && !is_transaction) {
+	} else if(!is_blockchain && !is_transaction && data.empty()) {
 		filename = "block.json";
 		ifs.open(filename);
 	} else if(!data.empty()) { // if broadcasting transaction over entire network
@@ -462,7 +464,9 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction, std::string i
 		ifs.open(filename);
 	}
 	try {
-		j = j.parse(ifs); // checking if is valid json
+		if(data.empty()) {
+			j = j.parse(ifs); // checking if is valid json
+		}
 	} catch(...) {
 		std::cout << ifs.rdbuf();
 		pthread_exit(NULL); // parsing block(chain) failed
@@ -476,7 +480,7 @@ int broadcast::send_chain(bool is_blockchain, bool is_transaction, std::string i
 	std::ifstream ifs_obj(filename);
 	std::stringstream ss_chain;
 	ss_chain << ifs_obj.rdbuf(); // putting transaction into raw stringstream format since nlohmann::json::dump is behaving incorrectly
-	std::string json_str = ss_chain.str();
+	std::string json_str = (data.empty()) ? ss_chain.str() : data;
 	if(isocket < 0) {
 		error_handler("SOCKET CREATION");
 		send_chain(is_blockchain, is_transaction, ip, data);
