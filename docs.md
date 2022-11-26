@@ -1,5 +1,5 @@
 
-[Return to Main Page](/)
+[Return to Main Page](../)
 ## Table of Contents
 - [Project Structure](#Project-Structure)
 - [broadcast.cpp](#broadcast.h)
